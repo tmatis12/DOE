@@ -1,0 +1,69 @@
+---
+title: "Test 1: (Insert Name of Design)"
+author:
+- Author 1
+- Author 2
+- Author 3
+date: Last compiled on `r format(Sys.time(), '%B %d, %Y')` at `r format(Sys.time(),'%l:%M %p - %Z')`
+output:
+  html_document: 
+    toc: true
+    number_sections: true
+    toc_float: true
+  word_document:
+    toc: true
+    number_sections: true
+  pdf_document: 
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+```
+
+# Put Design Name Here
+
+Type when this design is used.  Make it clear and concise 
+
+
+## Assumptions 
+
+
+Put as a bulleted list
+
+-   List item 1
+
+-   List item 2
+
+## Process
+
+###Sample Size Determination
+
+###Design Layout
+
+###Collect Data
+
+###Preliminary Plots
+
+(comment on how these might be used)
+
+###Statistical Test
+
+###Residuals
+
+(comment on when a vst or non-parametric would be necessary)
+
+###Inference
+
+###Multiple Comparisons 
+
+(If more than two populations)
+
+##Example
+
+(review all relevant steps above)
+(when reading in data, do from your own github account)
+
+### Complete Code
+
