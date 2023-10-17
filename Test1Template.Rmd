@@ -22,15 +22,14 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
 ```
 
-# Put Design Name Here
+# Put Name of Design Here (Put Team Members names here)
 
-Type when this design is used.  Make it clear and concise 
+(Type when this design is used, i.e. usage.  Be clear, through, and concise)
 
 
 ## Assumptions 
 
-
-Put as a bulleted list
+(Use bulleted list (with descriptions). May put other text as well.)
 
 -   List item 1
 
@@ -42,7 +41,11 @@ Put as a bulleted list
 
 ###Design Layout
 
+(Use a modified OutDesign function here.  Talk about Exporting)
+
 ###Collect Data
+
+(Talk about adding response to csv.  Use InDesign function here.)
 
 ###Preliminary Plots
 
