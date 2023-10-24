@@ -1,0 +1,3577 @@
+---
+title: "DOE Cookbook"
+author: Students IE 5342 (Fall 2023)
+date: Last compiled on `r format(Sys.time(), '%B %d, %Y')` at `r format(Sys.time(),'%l:%M %p - %Z')`
+output:
+  html_document: 
+    toc: true
+    number_sections: true
+    toc_float: true
+  word_document:
+    toc: true
+    number_sections: true
+  pdf_document: 
+    toc: true
+    number_sections: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+```
+
+# Two-Sample T-Test (pooled and unpooled) (Alejandro Lopez, Diego Polanco Lahoz, Rumman Rezvy)
+
+For the Two-Sample T-test we would have independent samples from two
+populations and we want to compare their populations means, to check if
+these are equal or not.
+
+## Assumptions
+
+1)  The populations follow a normal distribution.
+
+$$ (Population_1\, \& \, Population_2) \sim Normal $$
+
+2. a) The variances of the two populations are equal
+
+$$ \sigma^2_1 = \sigma^2_2  $$ From these two assumptions, the first one
+(about normality) is important but not crucial. Usually the way to
+assume it is to have n1 & n2 \> 40, as literature shows to follow
+Central Limit Theorem convention in statistical studies.
+
+If this does not happen, is not wrong to assume it normality, but some
+measurements should be taken if the plot (Normality Probability Plot)
+shows problems.
+
+The second assumption (equality of variances) is a stronger assumption
+and to continue with the data as raw as possible, this should
+be fulfilled completely. Otherwise, actions should be taken.
+
+Another assumption can be taken from these ideas which is technically
+derived from the second:
+
+2. b) Variances of both populations are not equal:
+
+$$ \sigma^2_1 \neq \sigma^2_2  $$
+
+Depending on how we want to design our experiment, which assumption
+number 2 we want to use. If we consider it important to assume that
+variances are equal (or not), will change importantly the way to
+proceed.
+
+More details about this matter are followed in the post.
+
+## Process
+
+### Sample Size Determination
+
+The perfect scenario would be to have n1 and n2 greater or equal than
+40. This would be able to follow the Central Limit Theorem convention in
+statistical literature about a "minimum" amount of data to be
+distributed normally and thus, be concise with the first assumption.
+
+If the sample is lower, it's ok. In normal terms is not invalid to
+violate the first assumption. Just make sure that there is enough data
+available for n1 and n2 to have the same variances in both
+populations. Remember that the normality assumption is not as important
+when violated as the equal variances assumption.
+
+When the perfect scenario is not fulfilled, we can assume normality if
+and only if the Normality Probability Plot shows "fairly good". Since
+this assumption is not as critical as the second, we can assume whenever n1
+and/or n2 are less than 40.
+
+
+### Design Layout
+
+```{r}
+#Layout for Two-Sample T-Test
+#header
+library(agricolae)
+InDesign<-function(path){
+  indesign<-read.csv(path)
+  colnames(indesign)<-c("Male","Female")
+  indesign}
+##
+
+## Design Layout with Response
+dat1<-InDesign(path="https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentage.csv") #read file back into R with response added
+dat2<-InDesign(path="https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentageCLT.csv")
+```
+
+This is the code used for the two-sample t-test. The InDesign function reads the
+path given from the data and structures it. Considering the data, we
+only have to worry about the Male and Female columns.
+
+Is important to detail at this moment that pooled variances mean that
+the variances of two populations are equal. On the other side, unpooled
+variances are when we are working with two populations with different
+variances.
+
+
+### Collect Data
+
+From the previous code, the only thing missing is about wrangling the
+data. Since the data can be taken from specific columns, for this type
+of design there is no need to use the InDesign function (which is
+directly from the layout provided by the professor).
+
+But just to be transparent, the InDesign function will be sorting out
+the data from any type of data frame that we use. We can edit it to take
+the important observations (labeled as responses) and the factors that
+we are considering for the design. Since the two-sample t-test is the basis
+of all designs, we only consider two factors, and thus, each column for
+each data frame is one factor.
+
+The only thing to consider is that further designs will contain more
+than one factor, and thus, the sort of data will be sorted
+considering two columns. The first column will be the "factor counting"
+and the second column the observations for each factor.
+
+
+### Preliminary Plots
+
+The two preliminary plots we should consider are the Normality
+Probability Plot and the Boxplots for both samples.
+
+In the case of the Normality probability plot, this should follow a diagonal
+almost perfect line to consider the assumption of normality acceptable.
+For example:
+
+
+```{r}
+normdata<-rnorm(40,0,1)
+qqnorm(normdata)
+```
+
+This is a plot that follows a normality distributions. An example of an
+odd plot can be:
+
+```{r}
+bindata<-rbinom(40,10,0.2)
+qqnorm(bindata)
+```
+
+This case does not have a structured diagonal, because the data used
+for it is binomial. But this is a major example of a fairly good and
+odd plot.
+
+For the second assumption, boxplots should be analyzed. Let's see the
+next example:
+
+
+```{r}
+normpop1<-rnorm(40,0,1.2)
+normpop2<-rnorm(30,0,1.3)
+boxplot(normpop1,normpop2)
+```
+
+This is an example of boxplots that although they seem not perfectly
+equal, we can assume that their variances are relatively similar. Mostly
+because one population has 1.2 for standard deviation and the other 1.3
+for standard deviation.
+
+An odd example of a boxplot could be:
+
+
+```{r}
+normpop1b<-rnorm(40,5,10)
+normpop2b<-rnorm(50,20,20)
+boxplot(normpop1b,normpop2b)
+```
+
+This is an example where the means of each population are not equal, and
+the variances are either. This is an odd boxplot because at first glance we
+cannot see a line or a "margin" where almost all boxplots are included.
+Usually, these types of plots are self-explanatory when seen at first. We
+cannot assume equal variances when one box is up in the plot
+and the other is down.
+
+
+### Statistical Test
+
+When we assume that the populations are normal or if both n1 and n2 are
+large (\>40), we perform a t-test as follows:
+
+
+```{r}
+normpop1<-rnorm(40,0,1.2)
+normpop2<-rnorm(30,0,1.3)
+t.test(normpop1,normpop2)
+```
+
+From here since the p-value is 0.2291 \> 0.05 we can say that there is
+not enough evidence to reject Ho and thus, we can say the means are
+equal; which we know they are (they are 0).
+
+If the population distribution is "unknown" and either, n1 or n2 is not
+large, we have to go with the two assumptions specified previously.
+Knowing that the normality assumption is a weak assumption and fairly
+can be assumed by seeing normality plots, but that the equality of
+variance is a strong assumption and thus, we need to test for the
+equality of variances. This is done by using Levene's test which evaluates:
+
+$$ H_o: \, \sigma_1^2 = \sigma_2^2$$
+$$ H_a: \, \sigma_1^2 \neq \sigma_2^2$$ After checking this assumption,
+there are two outcomes:
+
+1)  If Levene's test proves variances are equal (not reject Ho), the t-test
+    can continue as the previous step.
+
+2)  If Levene's test proves variances are not equal (reject Ho),
+    transformation for data would be needed. For example, taking the
+    logarithm of observations would help to have equality of variances.
+
+These two cases are still being considered the "pooled" variances case.
+Pooled comes from equal variances as:
+
+$$ \sigma_1^2 = \sigma_2^2 = \sigma^2 $$
+
+For unequal variances or pooled variances, we assume initially that
+these are unequal. And considering this, the t-test that we want to use
+is Welch's t-test.
+
+Is important to consider that Welch's t-test keeps the assumption that the
+populations are approximately normally distributed, and thus, is
+important to check the Normality Plots (qqnorm) to continue in this
+path.
+
+### Residuals
+
+From the methods specified, the only two non-parametric tests used are
+Levene's t-test and Welch's t-test. Their usage is for pooled and
+unpooled variances respectively. Levene's t-test is used to check for
+equality of variances (pooled case), whereas Welch's t-test checks for
+equality of means when we assume the variances are not equal (unpooled
+case).
+
+For the case in R, Levene's test is part of the package "car". To call
+its function should follow the next structure:
+
+
+```{r, eval=FALSE}
+library(car)
+leveneTest(population1observations ~ population2observations, data = dat)
+```
+
+To call for the function in R for Welch's test is following the next
+structure:
+
+```{r, eval=FALSE}
+t.test(x, y = NULL, alternative = c("two.sided", "less", "greater"),mu = 0, paired = FALSE, var.equal = FALSE,conf.level = 0.95, …))
+```
+
+t.test package original from R contains Welch's t-test; only you have to
+type in the argument "var.equal=FALSE", which is the assumption of
+unequal variances.
+
+
+### Inference
+
+1)  If we know normality distribution and/or enough data is in n1 and n2
+    (\>40), the t-test has two outcomes:
+    1)  If the p-value is \<= 0.05, we fail to reject the null hypothesis and
+        thus, we conclude there is not enough evidence to say that means
+        are not equal to the two populations.
+    2)  If the p-value is \< 0.05, reject the null hypothesis and thus, we
+        conclude that there is sufficient evidence to prove that
+        populations mean are not equal.
+2)  If we have a population distribution "unknown" and either, n1 or n2
+    are not large:
+    1)  Levene's t-test p-value is \<= 0.05, we fail to reject the null
+        hypothesis and thus we can conclude that we do not have enough
+        evidence to prove that variances are not equal. Proceed with
+        a t-test where variances are equal.
+    2)  Levene's t-test p-value is \< 0.05, we reject the null
+        hypothesis and we can conclude that we have enough evidence to
+        prove that variances are not equal. Proceed with transformations
+        of the data (logarithmic transformations for example).
+3)  If we have assumed that the variances are not equal and we already
+    assumed that the populations distribute normally both:
+    1)  Welch's t-test p-value is \<= 0.05, we fail to reject the null
+        hypothesis and thus we do not have enough evidence to prove that
+        the means of the two populations are unequal.
+    2)  Welch's t-test p-value is \< 0.05, we reject the null hypothesis
+        and thus we have enough evidence to prove that the means of the
+        two populations are unequal.
+
+### Example
+
+```{r}
+# Importing Data from GitHub
+# Data Set 1: 10 Observations
+dat1 <- read.csv("https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentage.csv")
+
+# Data Set 2: 40 Observations
+dat2 <- read.csv("https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentageCLT.csv")
+
+# Determine Sample Sizes
+# Data Set 1: 10 Observations
+length(dat1$Men)
+length(dat1$Women)
+
+# Data Set 2: 40 Observations
+length(dat2$Men)
+length(dat2$Women)
+
+# Calculate Sample Means and Variances
+# Data Set 1: 10 Observations
+mean(dat1$Men)
+mean(dat1$Women)
+var(dat1$Men)
+var(dat1$Women)
+
+# Data Set 2: 40 Observations
+mean(dat2$Men)
+mean(dat2$Women)
+var(dat2$Men)
+var(dat2$Women)
+
+# Hypotheses
+# Null Hypothesis: The means of the two groups are equal
+# H0: μ1 = μ2
+# Alternative Hypothesis: The means of the two groups are not equal
+# Ha: μ1 ≠ μ2
+
+# Checking Normality Assumptions Using Normal Probability Plots
+qqnorm(dat1$Men, main = "Normal Probability Plot - Data Set 1: Men")
+qqline(dat1$Men)
+qqnorm(dat1$Women, main = "Normal Probability Plot - Data Set 1: Women")
+qqline(dat1$Women)
+
+qqnorm(dat2$Men, main = "Normal Probability Plot - Data Set 2: Men")
+qqline(dat2$Men)
+qqnorm(dat2$Women, main = "Normal Probability Plot - Data Set 2: Women")
+qqline(dat2$Women)
+
+# Checking for Homogeneity of Variances Using Boxplot
+boxplot(dat1$Men, dat1$Women, names=c("Data Set 1: Men", "Data Set 1: Women"),col = c("Red","White"))
+boxplot(dat2$Men, dat2$Women, names=c("Data Set 2: Men", "Data Set 2: Women"),col = c("Red","White"))
+
+# If boxplot look odd
+#Performing Levene's Test for Homogeneity of Variances
+library(car)
+leveneTest(dat1$Men, dat1$Women)
+leveneTest(dat2$Men, dat2$Women)
+
+#From the first we see that not enough values are there to check for homogeneity of variance. The second case present unequal variances
+
+# Data Transformations (if necessary)
+# Considering results, we should transform data from the second
+transformedMen<-log(dat2$Men)
+transformedWomen<-log(dat2$Women)
+transformedMen1<-log(dat1$Men)
+transformedWomen1<-log(dat1$Women)
+
+# Performing Two-Sample t-Tests
+t.test(dat1$Men, dat1$Women, var.equal = TRUE)
+t.test(dat2$Men, dat2$Women, var.equal = TRUE) 
+t.test(transformedMen, transformedWomen, var.equal=TRUE)
+
+# Analyze the p-value
+# Data Set 1: p-value = 0.03375 < 0.05. 
+#Reject the null hypothesis; there's a significant difference.
+
+# Data Set 2: p-value = 0.09447 > 0.05. 
+#Fail to reject the null hypothesis; no significant difference.
+
+# Data Set 2 transformed: p-value = 0.137 > 0.05
+#Fail to reject the null hypothesis; no significant difference.
+
+
+#If we considered that the model had the assumption of unequal variances:
+
+t.test(dat2$Men, dat2$Women, var.equal = FALSE) 
+
+# Data Set 2: p-value = 0.09447 > 0.05. 
+#Fail to reject the null hypothesis; no significant difference.
+
+t.test(transformedMen1, transformedWomen1, var.equal = FALSE)
+
+# Data Set 1 transformed: p-value = 0.0482 < 0.05
+#Reject the null hypothesis; there's a significant difference.
+```
+### Complete Code
+
+```{r, eval=FALSE}
+#Layout for Two-Sample T-Test
+#header
+library(agricolae)
+InDesign<-function(path){
+  indesign<-read.csv(path)
+  colnames(indesign)<-c("Male","Female")
+  indesign}
+##
+
+## Design Layout with Response
+dat1<-InDesign(path="https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentage.csv") #read file back into R with response added
+dat2<-InDesign(path="https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentageCLT.csv")
+
+normdata<-rnorm(40,0,1)
+qqnorm(normdata)
+
+bindata<-rbinom(40,10,0.2)
+qqnorm(bindata)
+
+normpop1<-rnorm(40,0,1.2)
+normpop2<-rnorm(30,0,1.3)
+boxplot(normpop1,normpop2)
+
+normpop1b<-rnorm(40,5,10)
+normpop2b<-rnorm(50,20,20)
+boxplot(normpop1b,normpop2b)
+
+normpop1<-rnorm(40,0,1.2)
+normpop2<-rnorm(30,0,1.3)
+t.test(normpop1,normpop2)
+
+# Importing Data from GitHub
+# Data Set 1: 10 Observations
+dat1 <- read.csv("https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentage.csv")
+
+# Data Set 2: 40 Observations
+dat2 <- read.csv("https://raw.githubusercontent.com/DiegoPolancoLahozTTU/test1data/main/BodyFatPercentageCLT.csv")
+
+# Determine Sample Sizes
+# Data Set 1: 10 Observations
+length(dat1$Men)
+length(dat1$Women)
+
+# Data Set 2: 40 Observations
+length(dat2$Men)
+length(dat2$Women)
+
+# Calculate Sample Means and Variances
+# Data Set 1: 10 Observations
+mean(dat1$Men)
+mean(dat1$Women)
+var(dat1$Men)
+var(dat1$Women)
+
+# Data Set 2: 40 Observations
+mean(dat2$Men)
+mean(dat2$Women)
+var(dat2$Men)
+var(dat2$Women)
+
+# Hypotheses
+# Null Hypothesis: The means of the two groups are equal
+# H0: μ1 = μ2
+# Alternative Hypothesis: The means of the two groups are not equal
+# Ha: μ1 ≠ μ2
+
+# Checking Normality Assumptions Using Normal Probability Plots
+qqnorm(dat1$Men, main = "Normal Probability Plot - Data Set 1: Men")
+qqline(dat1$Men)
+qqnorm(dat1$Women, main = "Normal Probability Plot - Data Set 1: Women")
+qqline(dat1$Women)
+
+qqnorm(dat2$Men, main = "Normal Probability Plot - Data Set 2: Men")
+qqline(dat2$Men)
+qqnorm(dat2$Women, main = "Normal Probability Plot - Data Set 2: Women")
+qqline(dat2$Women)
+
+# Checking for Homogeneity of Variances Using Boxplot
+boxplot(dat1$Men, dat1$Women, names=c("Data Set 1: Men", "Data Set 1: Women"),col = c("Red","White"))
+boxplot(dat2$Men, dat2$Women, names=c("Data Set 2: Men", "Data Set 2: Women"),col = c("Red","White"))
+
+# If boxplot look odd
+#Performing Levene's Test for Homogeneity of Variances
+leveneTest(dat1$Men, dat1$Women)
+leveneTest(dat2$Men, dat2$Women)
+
+#From the first we see that not enough values are there to check for homogeneity of variance. The second case present unequal variances
+
+# Data Transformations (if necessary)
+# Considering results, we should transform data from the second
+transformedMen<-log(dat2$Men)
+transformedWomen<-log(dat2$Women)
+transformedMen1<-log(dat1$Men)
+transformedWomen1<-log(dat1$Women)
+
+# Performing Two-Sample t-Tests
+t.test(dat1$Men, dat1$Women, var.equal = TRUE)
+t.test(dat2$Men, dat2$Women, var.equal = TRUE) 
+t.test(transformedMen, transformedWomen, var.equal=TRUE)
+
+# Analyze the p-value
+# Data Set 1: p-value = 0.03375 < 0.05. 
+#Reject the null hypothesis; there's a significant difference.
+
+# Data Set 2: p-value = 0.09447 > 0.05. 
+#Fail to reject the null hypothesis; no significant difference.
+
+# Data Set 2 transformed: p-value = 0.137 > 0.05
+#Fail to reject the null hypothesis; no significant difference.
+
+
+#If we considered that the model had the assumption of unequal variances:
+
+t.test(dat2$Men, dat2$Women, var.equal = FALSE) 
+
+# Data Set 2: p-value = 0.09447 > 0.05. 
+#Fail to reject the null hypothesis; no significant difference.
+
+t.test(transformedMen1, transformedWomen1, var.equal = FALSE)
+
+# Data Set 1 transformed: p-value = 0.0482 < 0.05
+#Reject the null hypothesis; there's a significant difference.
+```
+# Paired T- Test (Devansh Shah, Malay Pandya, Nirmit Shah)
+
+-   #A Comprehensive Explanation : The paired T-Test is a statistical
+    method used to compare the means of two related groups or
+    conditions, often before and after an intervention or treatment.
+    This test is useful when you want to determine if there is a
+    statistically significant difference in means. Here's a more
+    detailed explanation:
+
+-   #Scenario: Imagine you're conducting an experiment where you have
+    measurements from the same subjects before and after an
+    intervention, like a medical treatment, training program, or any
+    paired observations.
+
+## Hypotheses
+
+-   Null Hypothesis (H0): There is no significant difference between the
+    means of the two related groups.
+
+    *Formula:* $H0: \mu_1 = \mu_2$
+
+-   Alternative Hypothesis (H1): There is a significant difference
+    between the means of the two related groups.
+
+    *Formula:* $H1: \mu_1 \neq \mu_2$
+
+Where: 
+- $H0$ is the null hypothesis. 
+- $H1$ is the alternative hypothesis.
+- $\mu_1$ represents the mean of the first group. 
+- $\mu_2$ represents the mean of the second group.
+
+## Formula
+
+The paired T-Test uses the following formula to calculate the
+T-statistic: $$ t = \frac{\bar{d}}{s_d/\sqrt{n}} $$ 
+Where: 
+- $t$ is the T-statistic.
+- $\bar{d}$ is the mean of the paired differences (d). 
+-$s_d$ is the standard deviation of the paired differences. - $n$ is the
+number of pairs.
+
+## Steps
+
+1.  Calculate the differences (d) between the paired observations:
+    $d = X_{\text{after}} - X_{\text{before}}$.
+2.  Calculate the mean of the differences ($\bar{d}$).
+3.  Calculate the standard deviation of the differences ($s_d$).
+4.  Determine the number of pairs ($n$).
+5.  Calculate the T-statistic using the formula.
+6.  Find the degrees of freedom ($df$) which is $n - 1$.
+7.  Look up the critical value of T from a T-table or use a statistical
+    calculator.
+8.  Compare the calculated T-statistic with the critical T-value to
+    assess the significance.
+
+## Interpretation
+
+-   If the calculated T-statistic is greater than the critical T-value,
+    you can reject the null hypothesis (H0) and conclude that there is a
+    statistically significant difference.
+-   If the T-statistic is less than the critical T-value, you fail to
+    reject the null hypothesis, indicating no significant difference.
+
+## Use Case
+
+You might use the paired T-Test to compare the effectiveness of a drug
+before and after treatment in a clinical trial. By applying this test
+and formula, you can scientifically determine whether there is a
+significant difference between paired observations.
+
+## Assumptions
+
+### Assumption-1: Normal Distribution
+
+The initial presumption is that the distribution of your data should be
+normal. This indicates that a bell-shaped curve should represent the
+distribution of values in your sample data. For the Paired T-Test to be
+accurate, normalcy is necessary.
+
+### Assumption-2: Paired Observations
+
+It is assumed, secondly, that you have made paired or matched
+observations. A paired T-test compares two sets of related data points,
+like measurements from two patients who are connected in some way or
+"before" and "after" measurements. By pairing data points, you may be
+sure that the comparisons are comparable or linked.
+
+### Assumption-3: Independence of Observations
+
+The third assumption is that the paired observations should be
+independent of each other. In other words, the value of one pair should
+not influence the value of another. For example, if you are comparing
+the test scores of students before and after a teaching intervention,
+it's assumed that one student's improvement doesn't affect another
+student's performance.
+
+Certainly, here's the text you provided formatted for R Markdown:
+
+## Process
+
+### Sample Size Determination
+
+The determination of sample size holds significant importance in the
+process of experiment planning or hypothesis testing, as it guarantees
+the presence of adequate statistical power for the detection of relevant
+differences. The R code example presented makes use of the `pwr` package
+to determine the sample size required for a paired T-test. In this
+analysis, we will deconstruct the code and provide a comprehensive
+explanation of its components.
+
+### Example sample size calculation (Code-Example)
+
+```{r}
+library(pwr)
+pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.8, type = "paired")
+```
+
+## Design Layout
+
+Design your experiment layout by specifying the factors, levels, and the
+assignment of treatments to experimental units. Use R to create your
+experimental design.
+
+### Factors and Levels
+
+Factors are the variables you want to study or manipulate.
+
+Levels represent variations or settings within these factors.
+
+For example, in a plant growth study, factors could include "fertilizer
+type" and "sunlight exposure," with levels like "organic" or "full sun."
+
+### Assignment of Treatments to Experimental Units
+
+Experimental Units are the subjects or objects on which you apply
+treatments.
+
+Treatments are specific combinations of factor levels assigned to these
+units.
+
+This process helps control and analyze the effects of different factor
+combinations.
+
+For instance, in the same plant growth study, individual plants can be
+experimental units, and treatments could be combinations of fertilizer
+and sunlight levels.
+
+```{r}
+## Loading Data
+
+
+data <- ("https://raw.githubusercontent.com/n289/example_data/main/example_data.csv?token=GHSAT0AAAAAACJH4F6DMNMRE7DJ3XK327Y2ZJVYCGQ")
+```
+
+## Collect Data
+
+Collect your data according to the experimental design. Ensure proper
+data collection techniques are followed.
+
+### Data Collection Process
+
+Gather information or measurements based on your experimental design.
+
+## Proper Data Collection Techniques
+
+-   Use established methods and tools.
+-   Train data collectors for accuracy.
+-   Maintain data consistency.
+
+## Quality Control
+
+-   Implement error checks.
+-   Ensure data completeness and accuracy.
+
+```{r}
+# Test Scores Before the Teaching Intervention
+before <- c(70, 75, 68, 80, 85, 72, 78, 74, 79, 65, 71, 88, 66, 76, 82, 89, 69, 73, 81, 77)
+# Test Scores After the Teaching Intervention
+after <- c(75, 80, 70, 85, 90, 78, 82, 79, 83, 72, 76, 92, 70, 80, 87, 94, 71, 75, 86, 84
+)
+# Calculate the differences (d) between paired observations
+differences <- after - before
+# Calculate the mean of the differences (d-bar)
+mean_diff <- mean(differences)
+# Calculate the standard deviation of the differences (s_d)
+sd_diff <- sd(differences)
+# Determine the number of pairs (n)
+n <- length(differences)
+# Calculate the T-statistic
+t_statistic <- mean_diff / (sd_diff / sqrt(n))
+# Degrees of freedom
+df <- n - 1
+# Set the desired confidence level
+confidence_level <- 0.95
+# Calculate the critical T-value
+critical_t_value <- qt((1 + confidence_level) / 2, df)
+# Compare the T-statistic with the critical T-value
+if (abs(t_statistic) > critical_t_value) {
+  cat("Reject the null hypothesis. The teaching intervention has a significant effect on test scores.\n")
+} else {
+  cat("Fail to reject the null hypothesis. There is no significant effect of the teaching intervention on test scores.\n")
+}
+# Output the results
+cat("T-Statistic:", t_statistic, "\n")
+cat("Critical T-Value:", critical_t_value, "\n")
+```
+
+## Histogram
+
+The code then creates a histogram. A histogram is a type of plot used to
+show the distribution of a single variable. In this case, it's
+displaying the distribution of a variable from your dataset.
+
+### Preliminary Plot (Code)
+
+```{r}
+hist(differences, main = "Histogram of Differences", xlab = "Difference")
+
+```
+
+###Residual Analysis Residual analysis is a critical step in statistical
+modeling. It involves checking if the differences between observed and
+predicted values (residuals) meet certain criteria:
+
+Normality: Residuals should roughly follow a normal distribution.
+Constant Variance: Residuals should have consistent variance.
+Independence: Residuals should not show patterns or dependencies.
+Outliers: Identify extreme values.
+
+## Residual Analysis - QQ Plot
+
+```{r}
+qqnorm(differences)
+qqline(differences)
+```
+
+##Inference Make inferences based on the experimental results. You can
+use confidence intervals to provide a range of values for a population
+parameter.
+
+```{r}
+if (abs(t_statistic) > critical_t_value) {
+  cat("Inference: The teaching intervention has a significant effect on test scores.\n")
+} else {
+  cat("Inference: There is no significant effect of the teaching intervention on test scores.\n")
+}
+
+```
+
+## Multiple Comparisons
+
+If you are comparing more than two populations, consider performing
+multiple comparisons to assess the differences between all pairs of
+groups.
+
+## Example
+
+### Example: Comparing Test Scores Before and After a Teaching Intervention
+
+#### Scenario
+
+Let's say you're a researcher evaluating the effectiveness of a teaching
+intervention in a school. You want to determine if the intervention has
+a significant impact on students' test scores.
+
+#### Hypothesis
+
+-   Null Hypothesis (H0): The teaching intervention has no significant
+    effect on students' test scores.
+-   Alternative Hypothesis (H1): The teaching intervention has a
+    significant effect on students' test scores.
+
+#### Design
+
+1.  You select a random sample of 20 students.
+2.  You administer a pre-test to these students to establish a baseline
+    score.
+3.  You implement the teaching intervention.
+4.  After the intervention, you administer a post-test to the same 20
+    students.
+
+#### Data
+
+Here are the test scores (out of 100) for the 20 students:
+
+-   Before: 70, 75, 68, 80, 85, 72, 78, 74, 79, 65, 71, 88, 66, 76, 82,
+    89, 69, 73, 81, 77
+-   After: 75, 80, 70, 85, 90, 78, 82, 79, 83, 72, 76, 92, 70, 80, 87,
+    94, 71, 75, 86, 84
+
+#### Analysis
+
+1.  Calculate the differences (d) between the paired observations
+    (after - before).
+
+$$
+d = (75-70), (80-75), (70-68), \ldots
+$$
+
+$$
+d = 5, 5, 2, \ldots
+$$
+
+2.  Calculate the mean of the differences ($\bar{d}$).
+
+$$
+\bar{d} = \frac{1}{20} \sum_{i=1}^{20} d_i = \frac{1}{20} (5 + 5 + 2 + \ldots) = 6.05
+$$
+
+3.  Calculate the standard deviation of the differences ($s_d$).
+
+$$
+s_d = \sqrt{\frac{1}{19} \sum_{i=1}^{20} (d_i - \bar{d})^2} = \sqrt{\frac{1/19 (0.82 + 0.82 + 16.16 + \ldots)} = 6.22
+$$
+
+4.  Determine the number of pairs ($n$).
+
+$$
+n = 20
+$$
+
+5.  Calculate the T-statistic using the formula.
+
+$$
+t = \frac{\bar{d}}{s_d/\sqrt{n}} = \frac{6.05}{6.22/\sqrt{20}} = 3.06
+$$
+
+6.  Find the degrees of freedom ($df$) which is $n - 1 = 19$.
+
+7.  Look up the critical value of T for your desired confidence level
+    (e.g., 95%) and degrees of freedom. Let's say it's 2.093.
+
+8.  Compare the calculated T-statistic (3.06) with the critical T-value
+    (2.093).
+
+
+#### Conclusion
+
+Since 3.06 is greater than 2.093, you can reject the null hypothesis
+(H0). This means the teaching intervention has a statistically
+significant effect on students' test scores.
+
+This example demonstrates how a paired T-Test can be applied in the
+context of experimental design and analysis to draw meaningful
+conclusions.
+
+```{r eval=FALSE}
+# Test Scores Before the Teaching Intervention
+before <- c(70, 75, 68, 80, 85, 72, 78, 74, 79, 65, 71, 88, 66, 76, 82, 89, 69, 73, 81, 77)
+# Test Scores After the Teaching Intervention
+after <- c(75, 80, 70, 85, 90, 78, 82, 79, 83, 72, 76, 92, 70, 80, 87, 94, 71, 75, 86, 84
+)
+# Calculate the differences (d) between paired observations
+differences <- after - before
+# Calculate the mean of the differences (d-bar)
+mean_diff <- mean(differences)
+# Calculate the standard deviation of the differences (s_d)
+sd_diff <- sd(differences)
+# Determine the number of pairs (n)
+n <- length(differences)
+# Calculate the T-statistic
+t_statistic <- mean_diff / (sd_diff / sqrt(n))
+# Degrees of freedom
+df <- n - 1
+# Set the desired confidence level
+confidence_level <- 0.95
+# Calculate the critical T-value
+critical_t_value <- qt((1 + confidence_level) / 2, df)
+# Compare the T-statistic with the critical T-value
+if (abs(t_statistic) > critical_t_value) {
+  cat("Reject the null hypothesis. The teaching intervention has a significant effect on test scores.\n")
+} else {
+  cat("Fail to reject the null hypothesis. There is no significant effect of the teaching intervention on test scores.\n")
+}
+# Output the results
+cat("T-Statistic:", t_statistic, "\n")
+cat("Critical T-Value:", critical_t_value, "\n")
+
+hist(differences, main = "Histogram of Differences", xlab = "Difference")
+
+# Residual Analysis - QQ Plot
+qqnorm(differences)
+qqline(differences)
+
+if (abs(t_statistic) > critical_t_value) {
+  cat("Inference: The teaching intervention has a significant effect on test scores.\n")
+} else {
+  cat("Inference: There is no significant effect of the teaching intervention on test scores.\n")
+}
+
+```
+# Two-Sample T-Test (Non-Parametric) (Roshan Sharma -Prosper Ezi)
+
+-   A two-sample t-test is a statistical hypothesis test used to compare the means of two independent groups to determine if there is a statistically significant difference between them.
+
+-   The t-test is a parametric test, meaning it makes certain assumptions about the distribution of the data, particularly that the data follows a normal distribution.
+
+-   If these assumptions are not met, you may use a nonparametric alternative, such as the Mann-Whitney U test (also known as the Wilcoxon rank-sum test), which is the nonparametric counterpart to the two-sample t-test.
+
+## Assumptions
+
+-   Normality we assume that our populations are Normally distributed
+
+-   We assume that our populations have continuous or ordinal variance
+
+-   Populations are independent between groups
+
+## Process
+
+### Sample Size Determination
+
+-   Given the standard deviation of the two populations Power analysis is conducted to determine the required sample size for each Population.
+
+-   An alternative to the Power.t.test when the standard deviation of the two populations is Unknown is Pwr.t.test.
+
+-   The power analysis is performed using the Pwr package in R.
+
+-   Based on the inputs of the power,effect size, and significance level, the power test determine the sample size that would be required for each population.
+
+    ```{r}
+    library("pwr")
+    # Data entry
+    TypeA <- c(1,2,3,4,5)
+    TypeB <- c(2,3,4,5,6)
+      # Set your desired parameters
+    effect_size <- 0.5  # Desired effect size
+    alpha <- 0.05       # Significance level
+    power <- 0.8        # Desired power
+
+    # Calculate the required sample size for each group
+    sample_size <- pwr.t.test(d = effect_size, sig.level = alpha, power = power, type = "two.sample")
+    print(sample_size)
+    # Print the result
+    cat("Required sample size for each population:", sample_size$n)
+
+    ```
+
+### Design Layout
+
+-   OutDesign() function is use to generate randomized design with allocated sample size per Population
+
+-   OutDesign creates a data frame with the defined factors,levels, and replication
+
+    Example:
+
+    ```{r}
+    # Define factors and levels
+    factor1 <- c("Type A", "Type B")
+    factor2 <- c("Sample 1", "Sample 2", "Sample 3")
+
+    # Create a simple design layout
+    design <- data.frame(
+      CoatingType = rep(c("Type A", "Type B"), each = length(TypeA)),
+      Conductivity = c(TypeA, TypeB)
+    )
+    write.csv(design, file = "design.csv")
+
+    ```
+
+-   The created design is Exported to CSV file for documentation
+
+    ```{r}
+    # Export the design to a CSV file
+    write.csv(design, file = "design.csv")
+
+    # View the design
+    head(design)
+    ```
+
+### Collect Data
+
+-   First empty design CSV with just layout is generated using OutDesign() function.
+
+-   Next, actual observed data for each population is collected.
+
+-   Then using InDesign() function collected data are added as column in the design CSV.
+
+-   Original CSV is overwritten with new data-containing CSV.
+
+### Preliminary Plots
+
+-   Check for normality of populations by the normal probability plot (qqnorm) and check for equality of variance by using boxplot and Dotplots.
+
+    ```{r}
+    # QQ-plot for Type A
+    qqnorm(TypeA)
+    qqline(TypeA)
+    # QQ-plot for Type B
+    qqnorm(TypeB, col = "red")
+    qqline(TypeB, col = "red")
+
+
+
+    ```
+
+    ```{r}
+    # Preliminary Plots
+    # Box plot
+    boxplot(TypeA, TypeB, names = c("Type A", "Type B"))
+    title("Box Plot of Conductivity by Coating Type")
+
+    # Dot plot
+    par(mfrow=c(1,2))  # Set up a 1x2 layout for plots
+    plot(TypeA, pch=1, col="red", ylab="Value", main="Dot Plot of Type A")
+    points(TypeB, pch=1, col="blue", main="Dot Plot of Type B")
+    par(mfrow=c(1,1))  # Reset the layout to 1x1
+
+    ```
+
+-   Normality assumptions of populations are not sensitive but constant variance assumptions are very sensitive, if violated it may lead to erroneous p-value result on failing to reject H0.
+
+-   If variances of the populations are unequal, look to stabilize the variance by taking the logarithm of the data and then re-graph to see if variance has been stabilized.
+
+### Two Sample-T-Test
+
+-   If a two-sample t test does not meet the conditions of having continuous random variable, or if the data from the two samples are discrete, then a non-parametric two sample t test is optimal for the experiment.
+
+-   The Mann Whitney U test or Wilcoxon is a non-parametric test that may be used for unpaired data where the samples are independent of each other.
+
+-   In the Mann Whitney U test, we are testing the null hypothesis that the mean of population 1 is equal to the mean of population 2, and the alternative hypothesis that means of both population 1 and 2 are not equal at an alpha level of 0.05.
+
+-   The p-value from the Wilcoxon test will tell us if there is any evidence to reject or fail to reject H0 at an alpha level of 0.05.
+
+```{r}
+# Wilcoxon rank-sum test
+wilcox_test_result <- wilcox.test(TypeA, TypeB)
+print(wilcox_test_result)
+```
+
+### Residuals
+
+-   If the extracted and plotted residuals is not normally distributed VST is considered.
+
+-   Transformations like log,square root, or Box-Cox is use to help normalize residuals.
+
+-   Non-parametric test is used when residuals remain non-normal after transformation.
+
+-   Non-parametric test like the wilcoxon rank sum test do not make assumptions about the underlying distribution of the data.
+
+-   Therefore, these tests maintain validity even when the normality assumption is violated.
+
+### Inference
+
+-   H0: mean of Population 1 equal to the mean of population 2. Alternative H: Mean of population 1 and 2 are unequal.
+
+-   From the Wilcoxon test, if P-value is greater than alpha 0.05 then we fail to reject H0 which means there is a no significant difference between the means of population 1 and 2.
+
+-   The sample size of the population influences the result of P-value, generally as the sample size increases the impact of random error decreases. A larger sample size will yield to a lower standard deviation of the sample means.
+
+    ```{r}
+    # Inference
+    cat("Wilcoxon Rank-Sum Test Result:\n")
+    print(wilcox_test_result)
+
+    if (wilcox_test_result$p.value < alpha) {
+      cat("Reject the null hypothesis. There is a significant difference between the means of Type A and Type B.\n")
+    } else {
+      cat("Fail to reject the null hypothesis. There is no significant difference between the means of Type A and Type B.\n")
+    }
+    ```
+
+    ### Multiple Comparisons
+
+If more than two populations
+
+-   We are performing a non-parametric two sample t test, so we only have two independent populations that we are testing the equality of their sample means. We cannot run a multiple comparisons test since we don't have more than two populations.
+
+## Example
+
+| 
+| **Coating Type** \| **Conductivity Level**
+| Type A   \| 1 \| 2 \| 3 \| 4 \| 5
+| Type B   \| 2 \| 3 \| 4 \| 5 \| 6
+
+-   We are going to compare the mean strength of conductivity of two different coating types to see if there is any difference in conductivity due to the coating type. 
+
+-   The strength of conductivity will be scored by using a **liker scale of (1-6)** 1 being the weakest conductivity level and 5 being the strongest conductivity level   
+
+-   **H0**: $\mu$ Type A = $\mu$ Type B 
+
+-   **HA**: $\mu$ Type A = $\mu$ Type B 
+
+-   **Note:** This is an unpaired sample nonparametric T test because the material used to test the conductivity level of the coating types are all different.
+
+### Complete Code
+
+```{r}
+#Load necessary Packages
+library(pwr)
+
+#Data entry
+TypeA <- c(1,2,3,4,5)
+TypeB <- c(2,3,4,5,6)
+
+# Set your desired parameters
+effect_size <- 0.5  # Desired effect size
+alpha <- 0.05       # Significance level
+power <- 0.8        # Desired power
+
+# Calculate the required sample size for each group
+sample_size <- pwr.t.test(d = effect_size, sig.level = alpha, power = power, type = "two.sample")
+
+# Print the result
+cat("Required sample size for each population:", sample_size$n)
+
+# Design Layout using OutDesign function
+# Define factors and levels
+factor1 <- c("Type A", "Type B")
+factor2 <- c("Sample 1", "Sample 2", "Sample 3")
+
+# Create a simple design layout
+design <- data.frame(
+  CoatingType = rep(c("Type A", "Type B"), each = length(TypeA)),
+  Conductivity = c(TypeA, TypeB)
+)
+
+# Export the design to a CSV file
+write.csv(design, file = "design.csv")
+
+# View the design
+head(design)
+
+# Preliminary Plots
+# Box plot
+boxplot(TypeA, TypeB, names = c("Type A", "Type B"))
+title("Box Plot of Conductivity by Coating Type")
+
+# Dot plot
+par(mfrow=c(1,2))  # Set up a 1x2 layout for plots
+plot(TypeA, pch=1, col="red", ylab="Value", main="Dot Plot of Type A")
+points(TypeB, pch=1, col="blue", main="Dot Plot of Type B")
+par(mfrow=c(1,1))  # Reset the layout to 1x1
+
+# Residuals
+# If needed, calculate and check the residuals for normality and homoscedasticity
+# Apply transformations like log, square root, or Box-Cox if necessary
+
+# Wilcoxon rank-sum test
+wilcox_test_result <- wilcox.test(TypeA, TypeB)
+
+# Inference
+cat("Wilcoxon Rank-Sum Test Result:\n")
+print(wilcox_test_result)
+
+if (wilcox_test_result$p.value < alpha) {
+  cat("Reject the null hypothesis. There is a significant difference between the means of Type A and Type B.\n")
+} else {
+  cat("Fail to reject the null hypothesis. There is no significant difference between the means of Type A and Type B.\n")
+}
+
+```
+# Two-Sample T-Test (with VST) (By Ajala, Ponmile - Kininge, Rucha - Tejada, Omar )
+
+In a Two-Sample t-test, we look to compare the means of two independent
+groups in order to determine if there's a significant difference between
+them. We start by assuming normality and constant variance within the
+populations. We will explore the case where we don't have constant
+variance; if this is the case then, we will need to use a Variance
+Stabilizing Transformation (VST). It is needed to have 2 independent
+populations, otherwise ANOVA testing should be used instead.
+
+Summary:
+
+1.  Use T-test if we have constant variance and normality
+
+2.  If we don't have constant variance, we use VST (BoxCot)
+
+3.  Non-parametric test (Mann-Witney U-test)
+
+## Assumptions
+
+We mentioned previously the assumption of constant variance and
+normality. We will discuss further down the implications of each one.
+
+1.  **Constant Variance:** This is a strong assumption. The variance of
+    the two populations should be roughly equal. We can check the
+    variance using boxplots and residuals plot. If this is not the case,
+    a VST is required to proceed.
+
+2.  **Normality:** For the standard t-test to be accurate, it requires
+    normality however, non-normal data are best done with nonparametric
+    tests. We check normality with scatter plots and histograms.
+
+3.  **Independence:** The two populations must not come from the same
+    source of data.
+
+4.  **Random:** The data must be collected at random. This is to
+    extrapolate the general population of data.
+
+5.  **Small sample size:** Typically, a sample size of 30 is needed.
+    Otherwise, large number of samples would fall under Central Limit
+    Theory (CLT).
+
+    [Note: Also if sample size is too small, then t-test may not be a
+    proper statistical tool.]{.underline}
+
+[**Alternatives:**]{.underline}
+
+**Mann-Witney U-test:** Also known as the Wilcoxon test. This is a
+non-parametric statistical test that can be used as an alternative when
+the assumption of constant variance and normality are not met.
+
+[*Note:*]{.underline} *In the case of 2 or more populations, use Kruskal
+Wallace Test instead.*
+
+**VST**: We will explore deeply the effects of using a transformation in
+an attempt to stabilize the variance. There are several possible
+transformations (ex. Log, Sqrt, ArcSin, etc). In this section, we will
+use Box-Cox transformation, which is a power transformation using a best
+fitted lambda value, given a certain data set.
+
+## Process
+
+### Sample Size Determination
+
+Before we begin the experiment/hypothesis testing, it's important to
+know how many samples are needed prior to collecting data. Sample size
+directly affects the power of a study, meaning the probability of
+[correctly]{.underline} rejecting, or not rejecting, the null hypothesis
+and reducing Type I and II errors. It's also important to know if the
+amount of data needed for the experiment is realistic to obtain.
+Finally, budgeting constrains may be a factor to consider (such as,
+there is a financial constrain that limits the amount of data collected)
+
+*Note: Type I Error (α): This occurs when the null hypothesis is
+incorrectly rejected. [Conclude there is a difference when there is
+none]*
+
+*Note: Type II Error (β): This occurs when the null hypothesis is
+incorrectly not rejected. [Conclude there is no difference when there
+is]*
+
+In R, we use the pwr tool to determine the sample size. As an example,
+we used the following parameters to conlcude a sampling size of 26
+needed.
+
+**d** - Effect size (Cohen's d, delta between the means divided by the
+pooled std deviation) :
+
+**Sig.Level** - Significance level (Type I error)
+
+**Power**: Power of test (1 minus Type II error)
+
+```{r,echo=FALSE}
+library(pwr)
+pwr.t.test(n=NULL,d=.8,sig.level=0.05,power=.8,type="two.sample")
+```
+
+### Design Layout & Data collection
+
+It is relevant prior to data collection to layout the experimental design. We look to find a proper strategy in data collection such that we are able to perform the statistical test and fulfill the previous stated assumptions. Primarily, we are looking to fulfill the assumption of randomized design.
+
+As an example, the table below shows how we would collect data for a completely randomized design. We've used the levels labeled as "lvl1" and "lvl2" with 5 replications. The seed variable can be set to any number, as it will output a different random design. With these parameters, we can see that the 1st observation will come from lvl 1, the second from lvl 2, the 3rd from lvl 2, etc. The r column indicates the number of occurrence per level.
+
+```{r, echo=FALSE}
+library(agricolae)
+#CRD with I=2 levels (lvl1, lvl2) and J=5 replications 
+#Specify the I levels of a factor/treatment in a vector
+trt1<-c("lvl1","lvl2") 
+#Can set different random number seeds (seed = 12543)
+#Specify the J number of replications (r=5)
+design<-design.crd(trt=trt1,r=5,seed=123456)
+design$book
+```
+
+
+### Preliminary Plots
+
+**Histogram** - This type of plot is a graphical representation of the
+data distribution. A normal distribution histogram is symmetrical,
+bell-shaped with minimal skeness as shown below.
+
+```{r,echo=FALSE}
+#Histogram plot
+data <- rnorm(5000, mean = 0, sd = 1)
+hist(data, breaks = 20, prob = TRUE, main = "Normal Distribution Histogram", xlab = "Values", ylab = "Density")
+curve(dnorm(x, mean = mean(data), sd = sd(data)), col = "blue", lwd = 2, add = TRUE)
+```
+
+**QQ - Plot** - The quantile-quantile plot is another graphical
+representation used to check for normality. Typically, we look that the
+data set follows a straight line pattern, with minimal skewness and
+minimal outliers. Graph below is a representation of a normal
+distribution QQ plot.
+
+```{r,echo=FALSE}
+qqnorm(data, main="Normal QQ Plot") 
+qqline(data)
+```
+
+**Boxplot** - Also known as the Box-And-Whiskerplot, is a graphical
+representation of the dataset distribution. Primarily, we look for the
+InterQuartile Range (IQR). If the height of the boxes is similar we can
+conclude that the variance is minimal.
+
+```{r,echo=FALSE}
+data1 <- rnorm(100, mean = 10, sd = 2)
+data2 <- rnorm(100, mean = 10, sd = 2)
+combined_data <- list(Data1 = data1, Data2 = data2)
+boxplot(combined_data,col = c("yellow","orange"))
+```
+
+### Statistical Test
+
+The primary objective of the two-sample t-test is to test whether the
+means of two populations differ. We state the null and alternate
+hypothesis as follows:
+
+$$
+H_o : \mu_1 = \mu_2
+$$
+
+$$
+H_a : \mu_1 \neq  \mu_2
+$$
+
+[**Equations**]{.underline}
+
+1.  Test Statics
+
+$$
+t_{0}=(y_{1}-y_{2})/\sqrt{\frac{s_{1}^{2}}{n_{1}}+\frac{s_{2}^{2}}{n_{2}}}
+$$
+
+2.  Pooled Variance (Sp)
+
+$$
+S_{p}^{2}=\frac{(n_{1}-1)s_{2}^{1}+((n_{2}-1)s_{2}^{1})}{n_{1}+n_{2}-2}
+$$
+
+3.  Standard Error of the difference in Means (Sp)
+
+$$
+SE(y\bar{_{1}}-y\bar{_{2}})=\sqrt{(\frac{s_{2}^{1}}{n_{1}})}+(\frac{s_{2}^{2}}{n_{2}})
+$$
+
+4.  Degrees of Freedom
+
+$$
+df=n_{1}+n_{2}-2
+$$
+
+5.  P-value Calculation
+
+$$
+P=2*P(T>|t_{0}|)
+$$
+
+In conventional hypothesis testing, a fixed significance level (often
+*α*=0.05) is used. 
+For instance, if a test statistic *t*0 falls beyond
+the critical value of 2.101 (for a two-tailed test with 18 degrees of
+freedom), the null hypothesis (*H*0:*μ*1=*μ*2) would be rejected at the
+0.05 level of significance. However, this method doesn't convey the
+strength of evidence against *H*0. The P-value approach, on the other
+hand, calculates the probability of obtaining a test statistic as
+extreme as *t*0, assuming *H*0 is true.
+
+Linear Effects Equation
+
+$$
+Y_{ij}=\mu +\tau_{ij}+\epsilon _{ij}
+$$ Where μ = Mean, τ = effect, ε = error
+
+Linear Effects Equation after VST $$
+ Y_{ij}^{\lambda } =\mu +\tau_{ij}+\epsilon _{ij\lambda} 
+$$
+
+Where ε is now N(0,σ2)
+
+### Residuals
+
+We use the Residuals vs Fitted plot to look for constant variance. The
+residuals is difference between each observation and the estimated mean
+value of the population. We look for a straight line between the spread
+of the residuals to verify the assumption of constant variance.
+
+```{r, echo=FALSE}
+dat<-PlantGrowth
+aov.model<-aov(weight~group,data=dat)
+plot(aov.model,1)
+```
+
+### Multiple Comparisons
+
+If we reject the Ho in the ANOVA, then the next step is to determine
+which pairs of means are significantly different. However, in a
+two-sample t-test we only have two populations.
+
+[*Note:*]{.underline} *Possible examples include the LSD (Least
+Significant Difference - Not conservative) and/or Tukey's Test (More
+Conservative)*
+
+## Example
+
+A Mcdonald's in Texas claims that their drive-thru system has an average
+total service time of 75 seconds. This means from the moment a car
+approaches the speaker box to order until the moment he receives the
+food and leaves. This location claims that the time should be valid for
+all Mcdonald's in the USA. We look to conduct a two sample t-test to verify the validity of this claim.
+
+We collected 30 data points each at two Mcdonald's locations in Texas and Nevada.
+
+We will begin our analysis by observing graphs to determine the
+assumption of normality and equal variance.
+
+```{r, echo= FALSE}
+library(tidyr)
+pulldata<-read.csv("https://raw.githubusercontent.com/omarttuedu/MidtermData/main/Runfile.csv")
+data1<-pulldata$Nevada
+data2<-pulldata$Texas
+data<-data.frame(data1,data2)
+datapivot<-pivot_longer(data,c(data1,data2))
+dataplot<-c(data1,data2)
+x<-c(rep("Nevada",30),rep("Texas",30))
+qqnorm(data1, main = "Normal Q-Q Plot for data in Nevada")
+qqline(data1)
+qqnorm(data2, main = "Normal Q-Q Plot for data in Texas")
+qqline(data2)
+```
+
+The graph shown above indicates that there is a small indication of
+normal distribution given that the data set seems to follow the best
+fitted line. It's not a perfect fit, but the assumption of normality can
+be interpreted.
+
+```{r, echo=FALSE}
+boxplot(dataplot~x,data=data,xlab="Mcdonald's Location",ylab="observation",main="Boxplot of Observations",col = c("yellow","orange"))
+```
+
+The Boxplot graph shows that the means are different. However, the main
+information that we get is that the variance in the Nevada location is
+slightly higher than in the Texas location given that the height of the
+boxes are slightly different. Due to this, we will look to stabilize the
+variance via a VST using Box-Cox.
+
+```{r, echo = FALSE}
+library(MASS)
+boxcox(dataplot~x)
+```
+
+The graph shown above shows an approximate lambda value of 0.8-0.9. This
+value is very close to 1 in which it further validates the assumption of
+a slight variance difference obtain from the previous Boxplot graph. We
+will choose 0.88 as the lambda value with a 95% significance level.
+
+```{r, echo=FALSE}
+#Transform 1
+lambda=.88 
+dataplot<-dataplot^(lambda) 
+boxcox(dataplot~x)
+```
+
+The transformed graph now shows a lambda value closer to 1, which is
+what we are looking for. We will examine the boxplot graph after the
+transformation
+
+```{r, echo=FALSE}
+boxplot(dataplot~x,xlab="Mcdonald's Location",ylab="observation",main="Boxplot of Observations")
+```
+
+The boxplot graph now shows a slightly closer variance between the 2
+populations. The magnitude of the graph has drastically decreased. Now
+we can conduct a t-test of the data set to obtain an accurate result.
+
+```{r}
+data1<-data1^lambda
+data2<-data2^lambda
+t.test(data1,data2)
+```
+
+With a p-value of 4.286e-05 (\<0.05) at a 95% confidence interval, we
+can reject the null hypothesis in favor of the alternative meaning that
+the true difference in means is not 0.
+
+As an additional step, we can also explore a different transformation
+approach to compare the results. In this case we can use the square root
+transform to obtain new results, and compare the validity of the
+analysis.
+
+```{r}
+#Transform 2
+pulldata<-read.csv("https://raw.githubusercontent.com/omarttuedu/MidtermData/main/Runfile.csv")
+data1<-pulldata$Nevada
+data2<-pulldata$Texas
+data1<-sqrt(data1)
+data2<-sqrt(data2)
+dataplot<-sqrt(dataplot)
+boxplot(dataplot~x,xlab="Mcdonald's Location",ylab="observation",main="Boxplot of Observations")
+t.test(data1,data2)
+```
+
+The plot shown above, provides a similar observation with the Box-Cox
+approach. It can shown in the Boxplot that there is a slight difference
+in the variance, but the magnitude has substantially decreased.
+Additionally, conducting the t-test using the 2nd transform values, we
+can also conclude to reject the null hypothesis in favor of the
+alternate.
+
+# Completely Randomized Design  (Peter, Jai Sai Teja, Ravi Teja)
+
+-   A completely randomized design for comparing the mean of multiple populations calls for an ANOVA test. Usually in the experimental design portion of an ANOVA test, there are a few characteristics known. The alpha, or probability of type one error, and the beta, probability of type two error, are quantities that are set in advance.
+
+-   CRD is mainly applicable when they are two or more populations or treatments of a single dependent variable to be tested. say, $Pop_{1},Pop_{2},Pop_{3},....,Pop_{I}$ [ I, total \# of populations ]
+
+-   Equal number of samples to be collected from each population. Let say 'n' is the number of samples collected from a population. so, 'n' should be equal for all the populations in the test.
+
+-   However, the order of collecting data samples will be random for all the populations or treatments. $$
+    Pop_{1}: \_ , \_ ,s_{3}, \_ , ...,n_{samples}.\\Pop_{2}: \_ ,s_{1}, \_ , \_ , ...,n_{samples} \\Pop_{3}: \_ , \_ , \_ ,s_{2}, ...,n_{samples} \\Pop_{I}:s_{j}, \_ , \_ , \_ , ...,n_{samples}
+    $$ where, s= samples of the populations
+
+## Assumptions
+
+-   [The data is assumed to be **normally** distributed for each treatment level]{.underline}.
+
+-   [**Variance** of the distribution is assumed to be equal.]{.underline}
+
+These assumptions with a short example were discussed briefly under the preliminary plots section.
+
+## Process
+
+### Statistical Test
+
+-   [Fixed or Random effect:]{.underline} The term "**Fixed effects**" refers to the treatment variables that the researcher has chosen particularly for the study. Categorical variables, such as varying degrees of an independent variable, are frequently used to denote the test treatments. In order to determine if there are statistically significant changes between the fixed treatment groups, the fixed effects in CRD are commonly examined using the ANOVA approach. **Random effects** are sources of variability that are not chosen by the researcher. These are frequently used to take into consideration for nuisances or uncontrolled variability. CRD compares fixed treatment effects while assuming that any uncontrolled sources of variation are random.
+
+    -   For Fixed effects: $H_0:\tau_i=0$ and $H_a:\tau_i \not= 0$
+
+    -   For random effects: $H_0:\sigma_{\tau i}^2=0$ and $H_a:\sigma_{\tau i}^2\not=0$
+
+-   Each sample observation of the data will be represented as $$y_{ij} \Rightarrow j^{th} observation \ from\ the\ Population \ 'i' \\ \bar{y_{i.}} \Rightarrow Average \ of\ population\ 'i'$$
+
+-   Linear Effects Model for CRD:$$y_{ij} = \mu_{i} + \epsilon_{ij}\  \forall \ i,j$$
+
+    As we understood that each population average can be defined with grand mean and the treatment effect as shown below.$$\mu_{i} = \mu + \tau_{i} \ \forall \ i$$
+
+    Finally, we can say that,$$y_{ij} = \mu + \tau_{i} + \epsilon_{ij}\  \forall \ i,j$$where,
+
+    $\mu_{i} = Mean\ of\ each\ population.\\ \epsilon_{ij} = Random\ error\ effect[i.e., Difference\ between\ observations(y_{ij}) with\ respect\ to\ population\ average(\mu_{i})]\\ \mu = Grand\ mean [i,e,. Average\ of\ all\ the\ populations\ mean]\\ \tau_{i} = Treatment\ effect\ with\ respect\ to\ each\ population [i.e.,Difference\ between\ population\ average(\mu_{i}) with\ respect\ to\ grand\ mean(\mu)]$
+
+-   **Hypothesis model:**
+
+    [Null Hypothesis:]{.underline} All the treatment level means are equal, which means No significant difference between the means.$$H_0 : \mu _{1} = \mu _{2} =\ . \ .\ . \ = \mu _{k} \\ or \\H_0 : \tau_{i} = 0 \ ,  \forall \ i$$
+
+    [Alternative Hypothesis:]{.underline} At least one population mean is significantly different from others.$$H_a : Atleast \ one\ \mu_{i} \ differ\ from\ other\\or\\ \tau_{i} \neq 0 \ , \exists \ i$$
+
+-   **Single factor or One-Way ANOVA:**
+
+    The name ANOVA derived from a partitioning of total variability into its components. We can say the following using sum of squares: $$SS_{T} = SS_{treatmenets} + SS_{E}$$ i.e., $$\sum_{i=1}^{I}\sum_{j=1}^{n} \left ( y_{ij}-\bar{y}_{\cdot \cdot } \right )^{2} = n\sum_{i=1}^{I}\left ( \bar{y}_{i\cdot }-\bar{y}_{\cdot \cdot } \right )^{2} +\sum_{i=1}^{I}\sum_{j=1}^{n}\left ( y_{ij}-\bar{y}_{i \cdot } \right )^{2}$$
+
+    $SS_{T}$ = Sum of squares of total.
+
+    $SS_{treatments}$ = Sum of squares of treatments.
+
+    $SS_{E}$ = Sum of squares of errors.
+
+    -   Degree of freedom for each component of variability.
+
+        [Dof for treatments]{.underline} : Number of treatments - 1 [i.e., **I-1**]
+
+        [Dof for errors]{.underline} : Total number of observations(I\*J) - Number of treatments(I) [i.e., **IJ-I)**]
+
+        [Dof for Total]{.underline} : **IJ - 1**
+
+-   Following up with Mean square(MS) for each component of the total variability. $$MS_{\left ( treatments \right )} = \frac{SS_{treatments}}{Dof_{\left ( treatments \right )}} = \frac{SS_{treatments}}{I-1}$$ $$MS_{\left ( error \right )} = \frac{SS_{error}}{Dof_{\left ( error \right )}} = \frac{SS_{error}}{IJ-I}$$
+
+-   After performing statistical analysis of these components, we have to perform "F"test. The F-test is a statistical test that compares the variances of two or more groups or populations. The ANOVA F statistic is the mean square treatment over the mean squared error, which are both $\chi^2$ distributions.
+
+$$F_{0} = \frac{MS_{\left ( treatment \right )}}{MS_{\left ( error \right )}}$$
+
+The ANOVA table compiles all of the previous information into one location. It is commonly used to easily assist in finding the F statistic.
+
++-------------+----------------------------------+--------------------------------------------------+------------------------------------------------+---------------------------------------------+
+| Source      | Degrees of Freedom               | Sum of Squares                                   | Mean Square                                    | F Stastic                                   |
++:===========:+:================================:+:================================================:+:==============================================:+:===========================================:+
+| Treatment   | $\text{I-1}$                     | $\text{Sum of Square}$ $\text{Treatment (SSTr)}$ | $\text{Mean Square}$ $\text{Treatment (MSTr)}$ | $\text{F}_0=\frac{\text{MSTr}}{\text{MSE}}$ |
+|             |                                  |                                                  |                                                |                                             |
+| (Between)   |                                  |                                                  |                                                |                                             |
++-------------+----------------------------------+--------------------------------------------------+------------------------------------------------+---------------------------------------------+
+| Error       | $\text{I(J-1)} or \text{(IJ-I)}$ | $\text{Sum of Square}$ $\text{Error (SSE)}$      | $\text{Mean Square}$                           |                                             |
+|             |                                  |                                                  |                                                |                                             |
+| (Within)    |                                  |                                                  | $\text{Error (MSE)}$                           |                                             |
++-------------+----------------------------------+--------------------------------------------------+------------------------------------------------+---------------------------------------------+
+| Total       | $\text{IJ-1}$                    | $\text{Sum of Square}$ $\text{Total (SST)}$      |                                                |                                             |
++-------------+----------------------------------+--------------------------------------------------+------------------------------------------------+---------------------------------------------+
+
+### Sample Size Determination
+
+When Designing an experiment, the alpha, or probability of type one error, and the beta, probability of type two error, are quantities that are set in advance. This is similar to a T test. The difference comes in when calculating the number of samples that are required to have the required power. When using a T test with a normal distribution, alpha beta and n(sample size) are all related directly and if you have two, you can find the third. This is more complicated when using an ANOVA test to compare multiple populations because the ANOVA test follows an F distribution. The F distribution changes as the parameters change. Knowing the alpha and beta of your experiment doesn't mean that it is possible to calculate the number of samples required directly.
+
+The ANOVA F statistic is the mean square treatment over the mean squared error, which are both $\chi^2$ distributions. Combined, they make an F distribution with two degrees of freedom.
+
+$F_0=\left[\frac{MST_r}{MSE}\right] \sim F_{\nu_1,\nu_2}$ .
+
+$\nu_1=$ the degrees of freedom of the mean square treatment
+
+$\nu_2=$ the degrees of freedom of the mean square error
+
+To find the expected value of F, you look at the expected value of the mean square treatment over the expected value of the mean square error.
+
+$E[MST_r]=\sigma^2+\sigma_{Trt}^2$
+
+$E[MSE]=\sigma^2$\
+$E[F_0]=\left[\frac{E[MST_r]}{E[MSE]}\right]=1+\left[\frac{\sigma_{Trt}^2}{\sigma^2}\right]$
+
+The value for $\sigma_{Trt}^2$ changes between fixed effects and random effects models. For fixed effects, $\sigma_{Trt}^2=\frac{J\sum{\tau_i}}{I-1}$ For random effects, $\sigma_{Trt}^2=\sigma_{\tau_i}^2$. The hypothesis of the ANOVA test changes with fixed effects and random effects models.
+
+For Fixed effects: $H_0:\tau_i=0$ and $H_a:\tau_i \not= 0$
+
+For random effects: $H_0:\sigma_{\tau i}^2=0$ and $H_0:\sigma_{\tau i}^2\not=0$
+
+If the null hypothesis is true, $\sigma_{Trt}^2$ will equal zero. This means that the expected value for F will be driven to 1. When the expected value of F is one, you have a central F distribution. However, Whenever $\sigma_{Trt}^2$ does not equal 0, the expected value of F will change. This causes the null hypothesis to be rejected in favor of the alternative hypothesis. The term $\left[\frac{\sigma_{Trt}^2}{\sigma^2}\right]$ is called the "non centrality parameter"
+
+When you have a non centrality parameter, your non central F now has 3 parameters. This changes the shape of the F distribution.
+
+$F_0 \sim F_{\nu_1,\nu_2,[non\ centrality\ parameter] }$
+
+It is worth noting that there are multiple ways for this to be written. It is popular for the same concept to be written as:
+
+$E[F_0]=1+\left[\frac{\sigma_{Trt}^2}{\sigma^2}\right]=1+\left[\frac{\sigma_{between}^2}{\sigma_{within}^2}\right]$
+
+The power calculation process is very taxing and is not done by hand anymore. There used to be tables that would be referenced when looking for an F statistic with certain parameters and certain power. Now, We have programs like R to do all of the work for us. This guide will show how to use R to calculate the power and number of samples in an ANOVA test.
+
+To find the number of samples required for an experimental design in ANOVA, a power analysis of the experimental design can be done. This analysis requires that there is already information known about the data sets. This is information on the variability of the data. Both the $\sigma_{between}^2$ and the $\sigma_{within}^2$ must be known or estimated.
+
+$\sigma_{between}^2$ can be estimated by $S^2$, $S^2=\frac{\sum (\mu_i-\mu.)^2}{n-1}$
+
+#### power.anova.test
+
+To do the power analysis in R, the power.anova.test function will be used. Following is the usage guide provided by R for the power.anova.test
+
+```         
+power.anova.test(groups = NULL, n = NULL,between.var = NULL, within.var = NULL, sig.level = 0.05, power = NULL)
+```
+
+[Arguments]{.underline}
+
+|               |                                                   |
+|---------------|---------------------------------------------------|
+| `groups`      | Number of groups                                  |
+| `n`           | Number of observations (per group)                |
+| `between.var` | Between group variance                            |
+| `within.var`  | Within group variance                             |
+| `sig.level`   | Significance level (Type I error probability)     |
+| `power`       | Power of test (1 minus Type II error probability) |
+
+[Details]{.underline}
+
+Exactly one of the parameters `groups`, `n`, `between.var`, `power`, `within.var`, and `sig.level` must be passed as NULL, and that parameter is determined from the others. Notice that `sig.level` has non-NULL default so NULL must be explicitly passed if you want it computed.
+
+#### pwr.anova.test
+
+What if the variances aren't known values? This proves to be an issue because the power.anova.test is no longer usable. Instead the function pwr.anova.test is used. First, the library "pwr" must be added to your script using "library(pwr)" command. The variability is now estimated using Cohen's method.
+
+The famous statistician Jacob Cohen created a method for estimating the variability when the exact values of the means are unknown. This is done by choosing one of three options: minimum variability, intermediate variability, and maximum variability. Each option is selected based on the predicted spread of the means. He classifies each group as having an effect represented by f(different from the F statistic). Each option has a different equation to find the effect.
+
+These equations use the following variables:
+
+$\sigma =$ Standard deviation
+
+$d=\frac{\mu_{max} - \mu_{min}}{\sigma}$
+
+$k=$ the number of populations(Groups)
+
+Minimum variability is chosen if the bulk of the means are clustered around the central part of the data. An example of this would be if the means of 6 populations are thought to be (2.0, 2.4, 2.5, 2.5, 2.6, 3.0). The means are clustered around the midpoint, and there is approximately equal space between the cluster and the high and low means.
+
+$\text{f}_{min}=d\sqrt{\frac{1}{2k}}$
+
+Intermediate variability is chosen of the means are equally distributed across the group of the data. For example, if there were five populations with the following estimated means, they would be a good candidate for using the intermediate variability model. (7.0, 8.5, 10.1, 11.6, 12.9). All of the means are almost equally spaced out.
+
+$\text{f}_{int}=\frac{d}{2}\sqrt{\frac{k+1}{3(k-1)}}$
+
+Maximum variability is used for situations where there is bi-modal data with two clusters of means at the high and low end of the spread. An example of this would be if six populations had means predicted to be (100, 101, 98, 176, 174, 175). All of the data is very clustered around the two end points.
+
+For odd observations:
+
+$\text{f}_{int}=\frac{d}{2}\sqrt{\frac{k+1}{3(k-1)}}$
+
+For even observations:
+
+$\text{f}_{max}=\frac{d}{2}$
+
+This r value will now be used with the pwr.anova.test function to calculate either the power or number of samples required per group. Following is the usage guide provided by R for the pwr.anova.test.
+
+```         
+pwr.anova.test(k = NULL, n = NULL, f = NULL, sig.level = 0.05, power = NULL)
+```
+
+[Arguments]{.underline}
+
+|             |                                                   |
+|-------------|---------------------------------------------------|
+| `k`         | Number of groups                                  |
+| `n`         | Number of observations (per group)                |
+| `f`         | Effect size                                       |
+| `sig.level` | Significance level (Type I error probability)     |
+| `power`     | Power of test (1 minus Type II error probability) |
+
+[Details]{.underline}
+
+Exactly one of the parameters 'k','n','f','power' and 'sig.level' must be passed as NULL, and that parameter is determined from the others. Notice that the last one has non-NULL default so NULL must be explicitly passed if you want to compute it.
+
+### Design Layout
+
+With the power test complete, all of the information needed to plan the data collection is now in hand. The size has been determined. The type one and two errors, and thus power, have been predetermined. The next step before data collection is the experimental design. To be a completely randomized design, the data collection order needs to be randomized.
+
+The package "agricolae" in R will be used to generate the experimental design. This is a package created for analysis of many experiments commonly used in agricultural fields. It has a good analysis of CRD that is useful to us.
+
+To use this package, first download it using the install.packages("agricolae") command. Next load the package using the library(agricolae) command. The package is now ready for use in your R script.
+
+The design.crd is a package inside of the agricolae package. To set up the use of the design.crd package, format your information in the following way:
+
+For a CRD with I=4 levels (lvl1, lvl2, lvl3, lvl4), specify the I levels of a factor/treatment in a vector.
+
+Ex.
+
+```{r}
+ trt1<-c("lvl1","lvl2","lvl3","lvl4")
+```
+
+Following is the usage guide provided by R for the design.crd
+
+```         
+design.crd(trt, r, serie = 2, seed = 0, kinds = "Super-Duper",randomization=TRUE) 
+```
+
+[Arguments]{.underline}
+
+|                 |                                                 |
+|-----------------|-------------------------------------------------|
+| `trt`           | Treatments                                      |
+| `r`             | Replications                                    |
+| `serie`         | number plot, 1: 11,12; 2: 101,102; 3: 1001,1002 |
+| `seed`          | seed                                            |
+| `kinds`         | method for to randomize                         |
+| `randomization` | TRUE or FALSE - randomize                       |
+
+For our purposes, the only options needed are trt, r, and seed. The other options have to do with the type of randomization algorithm. for the trt, input the trt1 vector that was just created. For r put in the number of replications needed (which is the n calculated by the power test) and for the seed number, put any number you would like. The seed number is the start to the random number generator that randomizes the results. The default settings will work for our experimental design for the rest of the variables. Continuing with our example for a CRD with four levels and six replications, the R code would look like the following:
+
+```{r}
+library(agricolae) 
+trt1<-c("lvl1","lvl2","lvl3","lvl4") 
+design<-design.crd(trt=trt1,serie=0,r=6,seed=8240) 
+design$book
+write.csv(design$book, file = "design.csv")
+```
+
+Calling the book column of the design shows the order that the samples should be collected. In this example, the first sample collected is from level 4. The second sample collected is from level 2. The third sample collected is from level 4 again. This continues until six samples of each level have been collected. This random order is critical for the validity of the results. The last line writes the experiment order to a .csv file named "Design". This has a column called "plots" which keeps track of the sample number. It has another column called "r" which keeps track of a summation of how many samples from each population have been collected. It has another column called trt1(which is the name of your data set) and it tells you the order of sample collection. All of this is in a .csv file and can be edited in excel.
+
+### Collect Data
+
+Using the file created in the previous section, another column should be made called "data". This should record the observations of the data. Each sample should be collected in the order prescribed by the fourth column, in our case"trt1". With all of the data collected, it can be read into R using the read.csv command followed by the location of the file.
+
+```{r}
+CRD_Data<- read.csv("https://raw.githubusercontent.com/Jaisai0611/CRD-example/main/design.csv")
+head(CRD_Data)
+```
+
+### Preliminary Plots
+
+Let's recap the assumptions considered earlier with a short example.
+
+1.  [Normality of Data]{.underline}:
+
+    In R, we can use the "qqnorm" and "qqline" commands. These programs generate a quantile-quantile (Q-Q) plot, which allows you to visually verify the normality of your data. Your data is most likely regularly distributed if the points nearly follow a straight diagonal line.
+
+    The better the fit to a normal distribution, the closer the points are to the line. If the Q-Q plot exhibits a "S" curve, it indicates that your data has heavy tails and is not normally distributed. In that case we might consider doing data transformations or non-parametric testing.
+
+    ```{r}
+    pop1 <- c(21,35,42,47,28,36,40)
+    pop2 <- c(43,27,33,39,26,31,29)
+    pop3 <- c(30,38,41,25,35,37,45)
+
+    qqnorm(c(pop1,pop2,pop3), col = 'blue')
+    qqline(c(pop1,pop2,pop3), col = 'red')
+    ```
+
+-   [Comment on Q-Q Plot]{.underline}: The observations are aligned closely to the Normality line without much deviation. So, we assume that the all the populations are normally distributed.
+
+2.  [Constant Variance:]{.underline}
+
+    Boxplots can be used to visually test variance equality in a Completely Randomized Design. It gives an easy approach to examine the dispersion and distribution of data among multiple treatment populations. If the boxplots have similar box widths and box lengths and there are no obvious outliers indicating high variance discrepancies, this indicates that the variances are generally equal.
+
+    ```{r}
+    boxplot(pop1,pop2,pop3,col="lightblue", names = c("pop1","pop2","pop3"), main = "Box-Plot of 3 Random Populations", xlab= "Populations", ylab = "Observations")
+    ```
+
+-   [Comment on Boxplot:]{.underline} The assumed populations seem to have an equal variance as the width of the each box is relatively similar to one another.
+
+### Residuals (Model Adequacy)
+
+The ANOVA test is very sensitive to changes in variance. If the assumption of constant variance is not true, the ANOVA will not be an accurate test. To check the model adequacy, a boxcox plot can be referenced. This can lead to a variance stabilizing transformation if needed. Because these are not covered in this guide, only the instructions to read a boxcox plot are described. A boxcox plot will have a large arc on it and a confidence interval marked out. When comparing the confidence interval with the x axis, if 1 is included, the data is adequate for analysis by an ANOVA test. If the confidence interval does not include 1, the data collected is not suitable for an ANOVA test and a variance stabilizing transformation must be performed.
+
+Another way to check the model adequacy is using the residuals. A residual is the difference between the the individual value in a population and the average value from this same population:
+
+$$\text{e}_i = y_i.-\bar y_i.$$
+
+To create the residual plot the aov function is used. When the function is run, it will output four different graphs. The ones that are important for our purposes are the first two. These plots are the residual spread plot and the normal probability plot of the residuals.
+
+Following is a brief example that illustrates the aov function and shows the residual graphs
+
+```{r}
+Lvl1<-c(1000,1500,1200,1800,1600,1100)
+Lvl2<-c(1500,1800,2000,1200,2000,1700)
+Lvl3<-c(900,1000,1200,1500,1200,1550)
+Lvl4<-c(950,1050,1250,1550,1250,1600)
+
+dat<-data.frame(Lvl1,Lvl2,Lvl3,Lvl4)
+library(tidyr)
+dat<-pivot_longer(dat,c(Lvl1,Lvl2,Lvl3,Lvl4),names_to = "Treatments")
+aov.model<-aov(value~Treatments,data=dat)
+plot(aov.model,1)
+plot(aov.model,2)
+```
+
+Looking to the plots that are generated from the aov function, the first is the fitted values versus the residuals. What is important in this graph is that all of the values on the graph lie within two parallel lines. The approximate height and location of each column of values should be the same. The residuals should have about the same max and min values for each fitted value. Constant variance isn't shown if there are some fitted values that are much higher and lower then the others, or if the values on the graph seem to make a large "less then"(\<) or "greater then" sign(\>) with wide variation on some fitted values and small variation on others. The second graph is the normal probability plot of the residuals. All of the values should show up in a straight line, similar to the previously explained normal probability plot with the actual data.
+
+Alternatively, the data can be checked for constant variance using Levene's test or Fisher's test but those are not covered in this tutorial. If the data turns out to not validate the assumption of constant variance, use a type of transform to get the data to meet your assumptions. Variance stabilizing transforms are not covered in this tutorial. If this does not work. you can do a generalized linear model(GLM). GLM's are not covered in this tutorial.
+
+### Inference
+
+-   Now To determine statistical significance, compare the F statistic ($F_{0}$) to the critical value from the F-distribution table. The critical value is determined by your selected significance level $(\alpha )$ and the degrees of freedom for the F-distribution's numerator $(v_{1})$ and denominator $(v_{2})$.
+
+    $v_{1}\rightarrow Dof_{\left ( treatments \right )} \\ v_{2}\rightarrow Dof_{\left ( error \right )}$
+
+    If the estimated [F statistic is greater than the crucial value]{.underline}, then "**REJECT THE NULL HYPOTHESIS**". This indicates that at least one group has significantly different variance than the rest. $$F_{0}> F\left ( \alpha ,v_{1} ,v_{2}\right )\\ i.e., \ P_{value}< \alpha $$If the estimated [F statistic is less than or equal to the crucial value]{.underline}, then "**FAILED TO REJECT THE NULL HYPOTHESIS**". This implies that there is no statistically significant variation in variances across groups.$$
+    F_{0}>F\left ( \alpha ,v_{1} ,v_{2}\right )\\ i.e.,\ P_{value}> \alpha 
+    $$
+
+### Multiple Comparisons
+
+If the ANOVA results in a rejection of $H_0$ in favor of $H_a$, the conclusion that at least one mean significantly differs from the grand mean can be made. The next question is which mean or means differ significantly from the grand mean. To analyse this a multiple comparison test is run.
+
+There is a multiple comparison test called Least Significant Difference(LSD) It is a test that resembles a 2 sample T test but with different degrees of freedom on $\sigma$. This is taught in some text books but it is not the best test to use because it does not control for family wise error(type 1 error).
+
+The test that we will use is Tukey's test. It is also known as the Honest Significant Difference test(HSD). This test does account for family wise error(type 1 error).
+
+Tukey's test uses the studentized range statistic, q. This is the difference between the largest and smallest data in a sample that is normalized by the sample standard deviation.
+
+$q=\frac{\bar{y}_{max}-\bar{y}_{min}}{\sqrt{\frac{MSE}{n}}}\sim\ q_ {Dof\ of\ MSE}$
+
+Using q, we set up a confidence interval between the difference of the means. If zero is not in the interval, you reject $H_O$. If zero is in the interval, you fail to reject $H_O$.
+
+This is the interval that Tukey's test checks:
+
+$\bar{y}_i.-\bar{y}_j.- q_{\alpha}(\text{I,f})\sqrt{MSE(\frac{1}{n_i}+\frac{1}{n_j})} \eqslantless \mu_i-\mu_j \eqslantless \bar{y}_i.-\bar{y}_j.+ q_{\alpha}(\text{I,f})\sqrt{MSE(\frac{1}{n_i}+\frac{1}{n_j})}$
+
+To do Tukey's test in R, an aov(Analysis of variance) test is first used on the data. To do this test, your data must be saved in a data frame with the different populations in one column and the data in another column. The following example shows how to save data as vectors, then put them into a data frame. Then it shows how to use tidyr to organize the data into the previously described format. With the data set, an aov test is run and the data is saved to aov.model. Last Tukeys test is performed and plotted.
+
+```{r}
+plot(TukeyHSD(aov.model),las=1,cex.axis = 0.75)
+```
+
+Looking at the results of the Tukey's HSD test, it is clear that there is only one comparison where the confidence interval does not include zero. This is the difference in Level 3 and Level 2. This shows that the means between these to populations significantly differ. The rest of the comparisons include zero and so they are not significantly different from one another.
+
+## Example
+
+This one is sourced from the **Design and Analysis of Experiments** textbook by **D.C. Montgomery (8th ed.)** Exercise 3.21 (pg.133).
+
+**EXPERIMENT PERFORMED and DATA:**
+
+An Article in *Environmental International* (Vol. 18, No.4, 1992) describes an experiment in which the amount of radon released in showers was investigated. Radon-enriched water was used in the experiment, and six different orifice diameters were tested in shower heads. The data from the experiment are shown in the following table:
+
++------------------+---------------------+---------------------+---------------------+---------------------+
+| Orifice Diameter | Radon Released (%)\ | Radon Released (%)\ | Radon Released (%)\ | Radon Released (%)\ |
+|                  | Sample 1            | Sample 2            | Sample 3            | Sample 4            |
++==================+:===================:+:===================:+:===================:+:===================:+
+| **0.37**         | 80                  | 83                  | 83                  | 85                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+| **0.51**         | 75                  | 75                  | 79                  | 79                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+| **0.71**         | 74                  | 73                  | 76                  | 77                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+| **1.02**         | 67                  | 72                  | 74                  | 74                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+| **1.40**         | 62                  | 62                  | 67                  | 69                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+| **1.99**         | 60                  | 61                  | 64                  | 66                  |
++------------------+---------------------+---------------------+---------------------+---------------------+
+
+: *Data from the experiment (This data is stored as a CSV file in GitHub:* <https://raw.githubusercontent.com/Jaisai0611/CRD-example/main/EX%203.21.csv>)
+
+### Experimental Data fits the CRD model or not? if CRD, Factor levels (Orifice Diameter) Fixed or Random Effects?
+
+Observing the given data table, we can clearly understand that the experiment conducted or observations chosen would be in a random manner so that the environment in which the treatments are applied is as uniform as possible. Thus, It can be considered as a CRD Model.
+
+The treatment effects, according to the study conducted author considered particularly 6 variants in orifice diameter (0.37, 0.51, 0.71, 1.02, 1.40, 1.99). Thus we can consider it as fixed effects (Single factor ANOVA). The same experiment would have also been best suitable for Random Effects if orifice diameters were randomly chosen out of a big range of diameters, especially to perform Statistical analysis.
+
+### Read CSV file into R and perform some data wrangling to best fit for ANOVA
+
+The CSV file was read into R from the GitHub link. Using the *pivot_longer* command, we made sure to fit all the observations in a single column. Then, converted the data of Orifice Diameter as a factor. This was shown in the following Code chunk.
+
+```{r}
+#Read the CSV file into R
+ex3.21<- read.csv("https://raw.githubusercontent.com/Jaisai0611/CRD-example/main/EX%203.21.csv")
+
+#Data wrangling to make it fit for ANOVA
+library(tidyr)
+ex3.21<- pivot_longer(ex3.21,2:5,names_to = "samples", values_to = "Radon Released%")
+ex3.21$Orifice.Diameter<- as.factor(ex3.21$Orifice.Diameter)
+```
+
+### Check for Assumptions
+
+As discussed earlier, we must ensure that all the given data is normally distributed and that constant variance among all the factor levels of treatment.
+
+-   [Check for Normality of data]{.underline}
+
+    ```{r}
+    #Assumption1: Check for Normality of data
+    qqnorm(ex3.21$`Radon Released%`, ylab = "Radon Released %", col ='BLUE')
+    qqline(ex3.21$`Radon Released%`, col = 'RED')
+    ```
+
+    From the above NORMAL Q-Q Plot, most of the data points lie upon the normality line or closer to it, and no major deviations from the normal line were observed. Thus it can be interpreted that the data fits into a **Normal Distribution**.
+
+-   [Check for Constant Variance]{.underline}
+
+    ```{r}
+    #Assumption2: Check for Variance equality among different levels of Treatments
+    boxplot(ex3.21$`Radon Released%`~ ex3.21$Orifice.Diameter, main = "Boxplot for Orifice Diameters", xlab = "Orifice Diameters", ylab = "% of Radon Released", col = 'lightblue')
+    ```
+
+    From the plotted Boxplot, based on the size of each box which represents the variance of Radon released percentage for respective orifice diameter, it can be only interpreted as approximately constant variance.\
+    However, by performing Boxcox, we can check the Model adequacy to perform ANOVA.
+
+### Model Adequacy check using Boxcox
+
+```{r}
+library(MASS)
+boxcox(ex3.21$`Radon Released%`~ ex3.21$Orifice.Diameter,lambda = seq(-5, 8))
+```
+
+we can observe that ( $\lambda$ =1) lies within the confidence interval, thus confirming that our data is valid to proceed with ANOVA.
+
+### ANOVA (Analysis of Variance)
+
+-   **HYPOTHESIS:** (Recap Discussions)
+
+    -   **Null Hypothesis:** All the treatment level means are equal, which means No significant difference between the means of Radon released (%) with respect to Orifice Diameter.
+
+        $$
+        H_{0}: \mu_{1} =\mu_{2} =\mu_{3} =\mu_{4} =\mu_{5} =\mu_{6} \\
+        (Or)\\
+        H_{0}: \tau_{i} = 0\ \ \ \forall i
+        $$
+
+    -   **Alternate Hypothesis**: At least one mean is significantly different from others, which means at least one of the means out of 6 types of orifice diameters significantly differs from the rest.
+
+        $$
+        H_a: atleast\ one\ mean\ significantly\ differs\\
+        (Or)\\
+        H_a: \tau_i\ \neq\ 0\ \ \ \exists\ i
+        $$
+
+-   **Applying Hypothesis to our example**:
+
+    ```{r}
+    #Performing single factor ANOVA
+    Anova_3.21<- aov(`Radon Released%`~ Orifice.Diameter, data = ex3.21)
+    summary(Anova_3.21)
+    ```
+
+    We can observe that p-value (3.16e-08) is far less than our significant value (say 0.001 or 99% Conf. interval), which leads to reject the null hypothesis. Hence, there is a significant difference between the various types of Orifice diameters w.r.t Radon Released (%).
+
+Although we rejected null hypothesis, we are still unaware about which pair of means exactly differs. lets check the residual plots and later perform TukeysHSD test.
+
+### Residual plots from ANOVA
+
+```{r}
+plot(Anova_3.21,1, col = 'BLUE', col.lab = 'red', col.axis = 'blue')
+```
+
+-   **Comment**: Analyzing the Residuals vs Fitted values plot, widespread residual points can be observed which tells us that it has higher variability. however across all the treatments variance spread seems to be the same which was indicated by the red line over the center of the plot, and even spread can be observed on either side of the line.
+
+```{r}
+plot(Anova_3.21,2, col = 'BLUE', col.lab = 'red', col.axis = 'blue')
+```
+
+-   **Comment**: Observing the normal probability plot of the residuals, hard to interpret it as a Normality because we can see a few outliers from the normality line which is not even closely bounded.
+
+    However, we can't say that this data doesn't fit exactly for this type of statistical model, but let's proceed with the HSD test just for sake of identification of pairs of mean that are significantly different. This step accomplishes the ultimate goal of performing this statistical test (ANOVA with CRD)
+
+### Tukeys-HSD Test
+
+```{r}
+#Multiple pairwise means comparison using tukeys-HSD test
+library(car)
+results<-TukeyHSD(Anova_3.21)
+results_matrix <- as.matrix (results) 
+df_res <- as.data.frame(results_matrix[1]) #this conversion of results to matrix and data fram is for sake of ease in interpretting the color coded plot to identify the pairs of mean which significantly differ.
+plot(results, col= ifelse(df_res[,4]<0.05, 'red', 'darkgreen'), las = 1, xlim =c(-26,4), cex.axis = 0.75) # Aguments like las (axis lable directin), xlim (xasis scale limits), cex.axis (font size of axis labels) were used here in order to ehance the looks of graphics and also due to space contraints.
+
+```
+
+Observing the Tukeys HSD plot, a few pairs of orifice diameters whose differences in mean levels of oriffice diameter intersect with "0", meaning those pairs are not significantly different. But, **all those pairs on the plot, highlighted with red color are significantly different**.
+
+### Conclusion:
+
+On an overall scale, since more no. of pairs of mean (Orifice diameters) are significantly different. Hence, This statistical analysis strongly believes that Orifice diameter is affecting the percentage of Radon Released.
+
+
+### Complete Code
+
+```{r eval=FALSE}
+#Read the CSV file into R
+ex3.21<- read.csv("https://raw.githubusercontent.com/Jaisai0611/CRD-example/main/EX%203.21.csv")
+
+#Data wrangling to make it fit for ANOVA
+library(tidyr)
+ex3.21<- pivot_longer(ex3.21,2:5,names_to = "samples", values_to = "Radon Released%")
+ex3.21$Orifice.Diameter<- as.factor(ex3.21$Orifice.Diameter)
+
+#Assumption1: Check for Normality of data
+qqnorm(ex3.21$`Radon Released%`, ylab = "Radon Released %", col ='BLUE')
+qqline(ex3.21$`Radon Released%`, col = 'RED')
+
+#Assumption2: Check for Variance equality among different levels of Treatments
+boxplot(ex3.21$`Radon Released%`~ ex3.21$Orifice.Diameter, main = "Boxplot for Orifice Diameters", xlab = "Orifice Diameters", ylab = "% of Radon Released", col = 'lightblue')
+
+#Check if transformation of data required or not (MODEL ADEQUECY)
+library(MASS)
+boxcox(ex3.21$`Radon Released%`~ ex3.21$Orifice.Diameter,lambda = seq(-5, 8, 1/2))
+
+#Performing single factor ANOVA
+Anova_3.21<- aov(`Radon Released%`~ Orifice.Diameter, data = ex3.21)
+summary(Anova_3.21)
+plot(Anova_3.21)
+
+#Multiple pairwise means comparison using tukeys-HSD test
+library(car)
+comparision<-TukeyHSD(Anova_3.21)
+results_matrix <- as.matrix (results) 
+df_res <- as.data.frame(results_matrix[1]) #this conversion of results to matrix and data fram is for sake of ease in interpretting the color coded plot to identify the pairs of mean which significantly differ.
+plot(results_matrix, col= ifelse(df_res[,4]<0.05, 'red', 'black'), las = 1, xlim =c(-26,4), cex.axis = 0.75) # Aguments like las (axis lable directin), xlim (xasis scale limits), cex.axis (font size of axis labels) were used here in order to ehance the looks of graphics and also due to space contraints.
+
+```
+
+## Acknowledgement:
+All the technical content and equations used in this cookbook are sourced from the lectures of Dr.Timothy Matis.
+```{r setup2, include=FALSE}
+library(png) 
+library(jpeg) 
+library(grid) 
+library(pandoc)
+```
+
+# Completely Randomized Design - Non-Parametric (Matthew Harvey, Jessica Dedeaux, Harsh Patel)
+
+Parametric ANOVA tests assume normality of data and constant variance.
+If the assumption of normality is proven false, then non-parametric
+methods may be used. This method is known as the Kruskal-Wallis Test.
+Prior to the testing the hypothesis using Kruskal-Wallis, the Completely
+Randomized Design or CRD needs to be set-up in the R simulation console.
+Further, CRDs are built on the basis of defined levels and replications
+as shown in the Process section.
+
+<br />
+
+## Assumptions
+
+-   **Independence**: The observations within each group are assumed to
+    be independent of each other. This means that values in one group
+    should not be related to or influence the values in any other group.
+
+-   **Random Sampling**: The data should be collected using a random
+    sampling process. This means that each observation has an equal
+    probability of being included in the study.
+
+-   **Constant Variance**: Like one-way ANOVA testing, the variance
+    among the groups is assumed to be equal for non-parametric tests.
+
+-   **Normality**: For hypothesis testing, in one-way ANOVA, the model
+    errors are assumed to be normally distributed. However, for the
+    Kruskal-Wallis test (non-parametric ANOVA) we cannot assume normal
+    distribution.
+    
+<br />
+
+## Process
+
+Please note: the replications for the lesson are pre-defined.
+Traditionally, one would run a power analysis (pwr.t.test) for the
+desired alpha (i.e. 0.05) and the power for a specific effect (i.e. 1).
+This would denote the number of replications needed statistically
+satisfy the performance of the hypothesis testing.
+
+    
+<br />
+
+### Design Layout
+
+```{r eval=FALSE}
+library(agricolae)
+# Extensive functionality on experimental design functions package, typically used for agriculture research, package needs to be loaded to develop the functions
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+OutDesign<-function(levels, replication){
+  outdesign<-design.crd(levels, replication, serie = 1, 34268)$book
+  #outdesign<-outdesign[order(outdesign$levels), ]
+  write.csv(outdesign,"layout.csv")}
+# Line 1: OutDesign creates a function to export data
+# Line 2: CRD have defaults in the serie (plot number degrees) and seed (random number for testing) that can be altered to create the data. In this we have created number plot of 2 digits (1) and the random seed (34268). The random seed can be any set of numbers based on the study.
+# Line 3: CRD are random sets of data that do not need to be sorted from A to Z to run properly; therefore, this line is not needed
+# Line 4: Writes the layout to a csv file to the set working directory, check the set working directory to ensure it is saved in the proper location for your exploration
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+?design.crd
+# provides the parameters used in the function and proper description, typically used for agriculture research
+```
+    
+<br />
+
+
+#### Exporting
+
+The Outdesign function is created to pull data out of R into a csv file.
+This is done by creating a CRD with the listed parameters then writing
+the CSV. The CSV file saves to the set working directory. Note where the
+file was saved because this will need to be call later to import the
+dat. The importance of exporting the data and working from an exported
+file is the repeatability of the analysis. The export can be saved to
+online repository (i.e. <https://github.com>), and it can be linked in
+the code. The link will enable other users to repeat your analysis to be
+used in future renditions of the study.
+    
+<br />
+
+
+### Collect Data
+
+```{r eval=FALSE}
+InDesign<-function(path){
+  indesign<-read.csv(path)
+  indesign<-indesign[,2:4]
+  indesign <- indesign[,-c(2)]
+  colnames(indesign)<-c("response","levels")
+  indesign}
+# Line 1: Creates the InDesign function and then defines the pathname from the set working directory
+# Line 2: Note the columns needed for test, this will be based on the layout.csv column numbers
+# Line 3: Further manipulate the data, remove or add any columns needed for the analysis
+# Line 4: Name the columns, proper names to represent your data set
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+levels<-c("Level1","Level2","Level3")
+replication<-5
+OutDesign(levels, response) #open layout.csv, add column with response, and save file
+# Line 1: Define the levels of the analysis (i.e. i values).
+# Line 2: Define the number of replications in the analysis (i.e. j values).
+# Line 3: This will rename the replications output column to response, so you have the levels and the responses. This will also generate a file titled layout.csv.
+```
+    
+##### 5 replications was chosen by the lesson to show an extensive amount of data for example and reference material.
+    
+<br />
+
+
+```{r eval=FALSE}
+dat<-InDesign(path="/Users/YOURNAMEHERE/layout.csv") #read file back into R with response added
+dat
+# Line 1: Reads in the file layout.csv from the pathname from your set working directory to InDesign. If you view your files (right side of R Studio layout), you will see the file layout.csv . If not, make sure you have the library(agricolae) package loaded.
+# Line 2: Shows modified export data with levels and response only.
+```
+    
+<br />
+
+
+#### Adding Response to your data
+
+The InDesign function is created to pull data from the csv file back
+into R, but it is modified to perform the analysis (i.e. Kruskal-Wallace
+Test). This is done by calling the path that the CSV file is located
+which is in the set working directory. Then the data is modified by
+showing only the levels and the responses which is previously known for
+the replication outputs in the data set. Following, the proper naming of
+columns and rows can be used to present the "dat" of the data which is
+used for the study. Additionally, one can save the export to an online
+directory, and one can pull the data from there. Make sure the file is
+up to data and accurate before they test is run.
+    
+<br />
+
+
+#### Other Examples of Design Layout for CRD
+
+##### No seed means that the random number will be generated by the default parameters.
+
+```{r eval=FALSE}
+outdesign2 <-design.crd(trt,r,serie=3)
+print(outdesign2$parameters)
+book2<-outdesign2
+```
+    
+<br />
+
+
+##### Seeds mean the random number set is identified.
+
+```{r eval=FALSE}
+# seed = 12543
+outdesign1 <-design.crd(trt,r,serie=2,12543,"Mersenne-Twister")
+book1<-outdesign1
+```
+    
+<br />
+
+
+##### Pre-defined data set means that the data will then be randomized in which order the samples are taken.
+
+```{r eval=FALSE}
+trt <-c("CIP-101","CIP-201","CIP-301","CIP-401","CIP-501")
+r <-c(4,3,5,4,3)
+```
+    
+<br />
+
+
+### Statistical Test
+    
+<br />
+
+
+#### Linear effects equation
+
+$$
+y_{ij}= \mu + \tau_{i} + \epsilon_{ij} ~; ~where ~i=1,2,3 ~and ~j=1,2,3,4,5
+$$
+    
+<br />
+
+
+#### Hypothesis Testing:
+
+$$
+H_{0} : \mu_{1} = \mu_{2} = \mu_{3}~or~H_{0} : \tau_{i} = 0
+$$
+
+$$
+H_{a} : At~least~one~\mu ~is ~different ~or~H_{a} : \tau_{i} \neq 0
+$$
+    
+<br />
+
+
+###### Equation explanations can be found in the textbook Sections 3.2-3.3.
+###### (Montgomery, D. C. (2013). Design and analysis of experiments (8. ed). Wiley.)
+    
+<br />
+
+
+```{r eval=FALSE}
+Level1 <- c(values)
+Level2 <- c(values)
+Level3 <- c(values)
+# Create vectors of the levels that contain the data values.
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+Levels <- data.frame(Level1, Level2, Level3)
+# Compiles the vectors together to make the data frame.
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+Level_long <- pivot_longer(Levels, c(Level1, Level2, Level3))
+# Pivot the data frame from wide to long.
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+aov.model<-aov(value~name, data=Level_long)
+# Create an AOV model.
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+summary(aov.model)
+# Generates a summary of the ANOVA test. This can be used to evaluate the data.
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+plot(aov.model)
+# Generates Residual Plots from the data
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+qqnorm(Level_long$value)
+qqline(Level_long$value)
+# Generates a Q-Q Normal Plot with a best fit line
+```
+    
+<br />
+
+
+```{r eval=FALSE}
+kruskal.test(value~name, data= Level_long)
+# This function performs the Kruskal-Wallis test.
+```
+    
+<br />
+
+
+### Residuals
+
+##### Residuals can help determine if the data fits normality or not, and example plots are provided below:
+    
+<br />
+
+
+##### If we see that the data is following the line of best fit, then we can say that the data is normally distributed. But if the data starts to deviate from the line of best fit then we need to look for another method to test our Null hypothesis of the means of each group being equal to each other, like the Kruskal-Wallace Test.
+
+![](Rplot1.png)
+
+![](Rplot2.png)
+
+![](Rplot3.png)
+
+![](Rplot4.png)
+
+##### As we can see in the plots above, the red line deviates from the line of best fit there showing us that the data is not normally distributed. With this conclusion that the data is not normally distributed and has "messy" data, we can say that another test can be used to test the Null hypothesis that means of all the groups are equal (Kruskal-Wallace).
+    
+<br />
+
+
+##### One instance of when non-parametric testing can be used is Ordinal or Categorical Data: Non-parametric tests are appropriate for data with ordered categories (ordinal data) or purely categorical data (nominal data). These tests, such as the Mann-Whitney U test, Kruskal-Wallis test, or Chi-squared test, do not assume interval-level measurement or normally distributed data
+    
+<br />
+
+
+### Inference
+
+##### Once you run the ANOVA and check Residuals, you can determine whether the data is normally distributed or not. If it is not, you can run the Kruskal-Wallis test to analyze the data properly instead.
+    
+<br />
+
+
+##### Once the Kruskal-Wallis test is run, compare the P-value to alpha. If it is less than alpha, we reject the null hypothesis. If it is greater than alpha, we fail to reject the null hypothesis.
+    
+<br />
+
+
+## Example
+
+```{r}
+library(tidyr)
+# Organizes the "messy" data to usable format, need to load the package
+```
+    
+<br />
+
+
+```{r}
+library(dplyr)
+# Package used to manipulate the data into a uniform set to resolve the analysis, need to load the package
+```
+    
+<br />
+
+
+```{r}
+library(MASS)
+# Package supports functions and dataset for least squares, best fit, linear modes, and Kruskal-Wallace for multidimensional scaling
+```
+
+##### -Libraries' description from <https://cran.r-project.org>
+    
+<br />
+
+
+#### Modifying the example from <https://openpress.usask.ca/introtoappliedstatsforpsych/chapter/16-6-kruskal-wallis-test-h-test/>:
+
+##### With the following data on ml of potassium/quart in brands of drink, determine if there is a significant difference in the potassium content between brands. Assume alpha = 0.05.
+    
+<br />
+
+
+```{r echo=FALSE}
+brands<-read.csv("https://raw.githubusercontent.com/mharvey2696/Test1DoE/main/test.csv")
+brands
+```
+    
+<br />
+
+
+#### Linear Effects Equation
+
+$$
+y_{ij}= \mu + \tau_{i} + \epsilon_{ij} ; ~where ~i=1,2,3 ~and ~j=1,2,3,4,5
+$$
+
+##### i is the number of levels (brands) and j is the number of observations (DV).
+    
+<br />
+
+
+#### Hypothesis Testing:
+
+$$
+H_{0} : \mu_{1} = \mu_{2} = \mu_{3} ~or ~H_{0} : \tau_{i} = 0
+$$
+
+##### The null hypothesis assumes that the potassium content of each brand is the same.
+    
+<br />
+
+
+$$
+H_{a} : At~least~one~\mu~is~different~or~H_{a} : \tau_{i} \neq 0
+$$
+
+##### The alternative hypothesis assumes that at least one brand's potassium content will differ.
+    
+<br />
+
+
+##### Create the vectors and compile them together to make the data frame.
+
+```{r}
+A <- c(4.7, 3.2, 5.1,5.2,5)
+B <- c(5.3,6.4,7.3,6.8,7.2)
+C <- c(6.3,8.2,6.2,7.1,6.6)
+brands1 <- data.frame(A,B,C)
+```
+    
+<br />
+
+
+##### Pivot the data frame from wide to long and rename columns to match the original data table
+
+```{r}
+brand_long <- pivot_longer(brands1,c(A,B,C))
+colnames(brand_long)<-c("Brand","DV")
+```
+
+```{r}
+brand_long
+```
+    
+<br />
+
+
+##### OR
+    
+<br />
+
+
+##### An alternative way: Read in data from an online repository.
+
+```{r}
+brands2<-read.csv("https://raw.githubusercontent.com/mharvey2696/Test1DoE/main/CRD-NONPAR-CSV.csv")
+
+```
+    
+<br />
+
+
+##### Create an AOV model and then generate a summary of the ANOVA test. This can be used to evaluate the data.
+
+```{r}
+aov.model<-aov(DV~Brand,data=brands2)
+summary(aov.model)
+```
+    
+<br />
+
+
+##### Now that the ANOVA test has been completed, is the data Normally Distributed?
+    
+<br />
+
+
+##### Generate Residual Plots from the data.
+
+```{r eval=FALSE}
+plot(aov.model)
+```
+    
+![](Rplot2.png)
+
+##### The residuals do not follow the best fit line, and we can see there are some outliers. Markers 2, 6, and 12. The outliers represent data points that may skew the data to a false negative or positive.
+    
+<br />
+
+
+![](Rplot1.png)
+
+##### The residuals denote the error as it relates to the fitted values. The line of best fit is skewed above the zero line, splitting the fitted values at varying locations. The residuals' responses for each group are not similar in vertical length or variance. Therefore, the data does not show a constant variance. The varying data points cause for the assumption of the non-normal data, and it needs a transformation to become a data set with constant variance. In the case of a CRD, the data is non-parametric. This can be analyzed using the Kruskal-Wallace Test to understand the acceptance or rejection of the null hypothesis.
+    
+<br />
+
+
+![](Rplot4.png)
+
+##### The Levene's Test uses the data to test for constant variance. According to the chart, outliers 2, 6, 12 are extending the data outside of the constant variance; therefore, the data set does not maintain a constant variance. The data depicts a non-parametric data set that would need further exploration to access the condition of the null hypothesis.
+    
+<br />
+
+
+![](Rplot3.png)
+
+##### The Scale-Location plot is used to assess assumptions of constant variance of residuals and identify outliers and influential observations. In this data set, the data shows an inconsistent variance, the data is not split evenly over the line of best fit, and the points do not have similar distance between each set of fitted values; therefore, the data is non-parametric.
+    
+<br />
+
+
+##### Now, generate a Q-Q Normal Plot with a best fit line.
+
+```{r eval=FALSE}
+qqnorm(brands2$DV)
+qqline(brands2$DV)
+```
+    
+<br />
+
+
+![](Rplot5.png)
+
+##### Looking at the plot, the data does not closely follow the best fit line. The outliers represent data points that may skew the data to a false negative or positive.
+    
+<br />
+
+
+##### After analyzing all of the plots, we can conclude that the data is not normally distributed. Now that we have come to this conclusion, we can run the Kruskal-Wallis test for a proper analysis.
+    
+<br />
+
+
+```{r}
+kruskal.test(DV~Brand,data=brands2)
+# This function performs the Kruskal-Wallis test.
+```
+    
+<br />
+
+
+##### The p-value = 9.187e-03 is less than alpha = .05. Therefore, we reject the null hypothesis and conclude that there is a difference in potassium content between brands.
+    
+<br />
+
+
+### Complete Code of Example
+
+```{r eval=FALSE}
+library(agricolae)
+library(tidyr)
+library(dplyr)
+library(MASS)
+
+brands<-read.csv("https://raw.githubusercontent.com/mharvey2696/Test1DoE/main/test.csv")
+brands
+
+A <- c(4.7, 3.2, 5.1,5.2,5)
+B <- c(5.3,6.4,7.3,6.8,7.2)
+C <- c(6.3,8.2,6.2,7.1,6.6)
+
+brands1 <- data.frame(A,B,C)
+brand_long <- pivot_longer(brands1,c(A,B,C))
+colnames(brand_long)<-c("Brand","DV")
+# OR
+brands2<-read.csv("https://raw.githubusercontent.com/mharvey2696/Test1DoE/main/CRD-NONPAR-CSV.csv")
+
+aov.model<-aov(DV~Brand,data=brands2)
+summary(aov.model)
+
+plot(aov.model)
+qqnorm(brands2$DV)
+qqline(brands2$DV)
+
+kruskal.test(DV~Brand,data=brands2)
+```
+# Completely Randomised Design with VST (Dowthyaksai Lagadapati, Vineeth Kolthuri Vijay, Rahul Vithalani)
+
+**Usage :**
+
+The Completely Randomized Design is a statistical experimental design used when the treatments or factors are assigned to the experimental units randomly. This design is particularly useful when you want to investigate the effects of various treatments or factors without any specific structure. VST (Variance-Stabilizing Transformation) is sometimes used when the variances don't appear to be constant.
+
+## Assumptions :
+
+-   Homogeneity of Variance: The variance of the response variable is consistent across treatment groups, ensuring valid statistical comparisons.
+
+-   Random assignment: Assign subjects or units to treatment groups randomly to reduce bias and ensure equal chances for each unit.
+
+-   Independence: Ensure that each subject or unit's outcome is independent of others by random assignment.
+
+-   Normality: A roughly normal distribution of the response variable within each treatment group, with options for handling non-normal data if needed.
+
+-   Equal Sample Sizes: While it's often assumed that sample sizes are equal in a Completely Randomized Design, statistical methods can accommodate unequal sizes also.
+
+## Process:
+
+![](images/crd-vst%20process.jpg)
+
+### Sample Size Determination:
+
+Determining the sample size for a Completely Randomized Design (CRD) with Variance-Stabilizing Transformation (VST) involves several essential steps. First, clarify your research objectives and decide on the significance level, expected variability desired statistical power, and effect size. Choose the appropriate statistical test for your CRD with VST and calculate the sample size using the relevant formulae or software. Account for potential attrition, round up to the nearest whole number and ensure ethical and practical feasibility. Conduct pilot studies, if possible, to refine estimates, and seek expert validation. A well-considered sample size is crucial for reliable and meaningful study results, avoiding both underpowered and excessively large samples. Careful planning is key to achieving an appropriate sample size for your study.
+
+we can also determine the sample size by in R using the parameters if variances are known.
+
+```{r, eval=FALSE}
+power.anova.test(groups = NULL, n = NULL,between.var = NULL, within.var = NULL, sig.level = 0.05, power = NULL)
+```
+
+If the variances are not known we use pwr.anova.test to find the sample size.
+
+```{r, eval=FALSE}
+pwr.anova.test(k = NULL, n = NULL, f = NULL, sig.level = 0.05, power = NULL)
+```
+
+### Design Layout:
+
+Designing a Completely Randomized Design (CRD) layout with Variance-Stabilizing Transformation (VST) involves several key steps. Initially, identify your experimental units and define treatment groups. Randomly assign subjects to treatments to minimize bias, ensuring equal opportunities for each unit. Replicate treatments for robust results and plan data collection, specifying measurements and timing. Incorporate VST if needed and establish a systematic data recording process associated with treatment groups and units. Control randomization, address order effects, manage logistics, and account for confounding variables. Consider pilot testing to refine the layout, maintain thorough documentation for transparency, and ensure compliance with ethical and regulatory standards, particularly when dealing with human or animal subjects.
+
+```{r}
+#Layout for CRD with VST
+library(agricolae)
+output<-function(levels,replication){
+  out<-design.crd(levels,replication)$book
+  out<-out[order(out$levels), ]
+  write.csv(out,"layout.csv")}
+Input<-function(path){
+  ind<-read.csv(path)
+  ind<-ind[,4:5]
+  colnames(ind)<-c("levels","response")
+  ind}
+##
+
+
+## Design layout 
+levels<-c("P1","P2")
+replication<-5
+output(levels,replication) #open layout.csv, add column with response, and save file
+
+```
+
+we can manipulate the data or create an aditional solumn to the file and save it.
+
+### Collect Data:
+
+Conduct the experiments and record the responses for each treatment group. 
+
+Add the response data to a CSV file using the InDesign function. This function ensures the data is properly formatted for analysis. 
+
+we can also manually enter the data by typing or reading a csv file.
+
+### Preliminary Plots:
+
+**Plots for data with 2 populations and stable variance:**
+
+![](images/normal%20boxplot.png)
+
+![](images/normal%20hist.png)
+
+![](images/normal%20qqplot.png)
+
+![](images/normal%20res%20vs%20fit.png)
+
+![](images/normal%20scatter.png)
+
+**Plots for data with 3 populations and unstable variance:**
+
+![](images/Boxplot.png)
+
+![](images/histogram.png)
+
+![](images/qqplot.png)
+
+![](images/residual%20vs%20fitted.png)
+
+![](images/scatterplot.png)
+
+### Statistical Tests:
+
+Perform a suitable statistical test to analyze the data. For a Completely Randomized Design, you can use analysis of variance (ANOVA) to assess the treatment effects and determine if there are significant differences among the treatment groups.
+
+**Fixed Effects:**
+
+The factors or treatments that are of particular importance to the study are modeled using fixed effects. These elements are regarded as constant and not subject to change. They stand for degrees of a categorical variable, such as various treatment modalities or interventions.
+
+When to Apply:
+
+-   Use fixed effects when your primary interest is in a small number of distinct treatment levels or groups.
+
+-   Fixed effects are ideal when you want to assess the effects of these levels exactly and you want to compare these levels in a specified way.
+
+**Hypothesis :**
+
+Null Hypothesis : $H_{0} = \tau_{i}$ = 0 $\forall$ i
+
+Alternate Hypothesis : $H_{a} = \tau_{i} \neq \exists$ i
+
+In a CRD with fixed effects, the general linear model can be represented as : $Y_{ij} = \mu + \tau_{i} + \epsilon_{ij}$
+
+where
+
+-   $Y_{ij}$ represents the observed response for the j th observation in the i th treatment group.
+
+-   $\mu$ is the overall population mean.
+
+-   $\tau_i$ represents the effect of the i th treatment group.
+
+-   $\epsilon_{ij}$ is the random error term.
+
+[**Random Effects:**]{.underline}
+
+When modeling elements or groups that are not the focus of the study but are thought to have been randomly picked from a wider population, random effects are used. These elements serve as a source of random variability that is unrelated to the study's main objective.
+
+When to Apply:
+
+-   When you have many levels or categories within a factor and you want to simulate the variability associated with these levels, use random effects.
+
+-   When you want to account for the intrinsic variability within these levels and think these levels are a random sampling from a broader population, random effects are appropriate.
+
+In a CRD with random effects, the general linear model can be represented as:
+
+$Y_{ij} = \mu + \tau_{i} + \epsilon_{ij}$
+
+[Hypothesis:]{.underline}
+
+$H_{0} : \sigma_{\tau i} = 0$ , $\forall$ i\
+
+$H_{a}: \sigma_{\tau i} \neq 0$ , $\exists$ i
+
+A Completely Randomized Design (CRD) is a common experimental design used in statistical analysis, and Variance Stabilizing Transformations (VST) can be applied to address issues related to non-constant variance and non-normality. Below, I'll outline the main formulas typically used when applying VST to CRD:
+
+[ANOVA table:]{.underline}
+
+| **Source**  | **Sum of Square**                                       | **Degree of freedom**  | **Mean Square**  | **F-distribution**  |
+|--------------|------------------|--------------|--------------|--------------|
+| Treatment   | $SSTr = n\sum(\overline{y_{i.}} - \overline{y_{..}})^2$ | k-1                    | MSTr=SSTr/I-1    | F= MSTr/MSE         |
+| Error       | $SSE = \sum\sum(y_{ij} - \overline{y_{i.}})^2$          | n -I                   | MSE=SSE/I(J-I)   |                     |
+| Total       | $SST = \sum\sum(y_{ij} - \overline{y_{..}})^2$          | N-1 or nk-1            |                  |                     |
+
+SST represents the total variability in the data.
+
+SSTR represents the variability between treatment groups.
+
+SSE represents the unexplained variability or residual variation within treatment groups. 
+
+The Grand Mean : $\overline y_{..}$ = $\sum\sum \frac{y_{ij}}{N}$
+
+where
+
+-   $\overline y_{..}$ is the grand mean of all observations. 
+
+-   N is the total number of observations. 
+
+-   $y_{ij}$  is the j th observation in the i th treatment group. 
+
+The Sum of Squares Total (SST): SST= $\sum_{i=1}^{k}\sum_{j=1}^{n}(y_{ij} - \overline{y}..)^2$
+
+where
+
+-   k is the number of treatment groups.
+
+-   n is the number of observations in each group.
+
+The Sum of Squares Treatment (SSTR): $SSTr = n\sum(\overline{y_{i.}} - \overline{y_{..}})^2$
+
+The Sum of Squares Error (SSE): SSE = SST − SSTr 
+
+Mean squares = Sum of Squares /degrees of freedom.
+
+-   The F-statistic : F= MSTr / MSE
+
+-   P-value : The p-value is determined from the F-distribution with degrees of freedom for Treatment and degrees of freedom for Error , using the F-statistic. 
+
+After performing the analysis of variance (ANOVA) on the transformed data, you may obtain an F-statistic and a corresponding p-value. These values will help you determine whether there are significant differences between the treatment groups in the CRD. If significant differences are detected, you can make inferences about the impact of the treatments on the response variable. 
+
+If the variances are not stable or the data is not normal, specific VST applied to the data will depend on the nature of the data and the transformation needed to meet the assumptions of ANOVA. The formulas listed above are fundamental for conducting the analysis in a CRD with VST, but the choice of transformation and related equations may vary depending on the specific transformation used (e.g., square root, logarithmic, or Box-Cox). 
+
+[**Transformations:**]{.underline}
+
+[Logarithmic Transformation:]{.underline}
+
+When to Use: When data shows exponential or multiplicative growth, logarithmic transformations are frequently utilized. For instance, a log transformation can assist in linearizing the relationship and stabilizing variance when researching the effects of financial variables or the proliferation of microorganisms.
+
+[Box-Cox Transformation:]{.underline}
+
+When to Use: Because of normality or constant variance assumptions its adaptability, the Box-Cox transformation can be applied to data that doesn't adhere to the assumptions of normality or constant variance. The best power transformation for your data can be found by calculating the lambda () value.
+
+[Transformation by the square root:]{.underline}
+
+When to Use: When the variance of the data rises with the mean, a square root transformation can be applied. This is frequently seen in count statistics, such as the quantity of flaws in production processes
+
+### Residuals:
+
+In a Completely Randomized Design (CRD) with Variance-Stabilizing Transformation (VST), VST or non-parametric methods are often necessary in the presence of data characteristics like unequal variances, non-normality, outliers, small sample sizes, non-continuous data, or the need for robustness. VST helps address unequal variances and non-normality, while non-parametric methods are suitable for non-continuous or small sample data. These approaches ensure valid and reliable statistical analysis, even when traditional parametric assumptions are not met. The choice between VST and non-parametric methods depends on the data nature and study goals.
+
+### Inference:
+
+Inference in a Completely Randomized Design (CRD) with Variance-Stabilizing Transformation (VST) involves a structured process for drawing conclusions from experimental data. It begins with data analysis, typically using ANOVA, while considering the application of VST to stabilize variance. Hypotheses are formulated, and a significance level is chosen to determine the probability of Type I errors. The appropriate statistical test provides a p-value, aiding in assessing statistical significance. Post-hoc tests may identify specific group differences, and effect size measures quantify the magnitude of these differences. Confidence intervals can offer parameter estimates. Residual analysis ensures model fit and assumption adherence. Interpretation is based on p-values, followed by assessing practical significance. Findings are clearly communicated in research reports or presentations. The process concludes with discussions on limitations and future research directions, emphasizing the importance of meaningful interpretation and communication in the scientific process.
+
+### Multiple Comparisons:
+
+In a Completely Randomized Design (CRD) with Variance-Stabilizing Transformation (VST) involving more than two treatment groups, you can conduct multiple comparisons to pinpoint significant differences. Start with an initial ANOVA to confirm group distinctions. If ANOVA shows significance, select an appropriate multiple comparison test such as Tukey's HSD, Bonferroni, Duncan's Multiple Range Test, or Scheffé's Method. Execute the chosen test to identify which specific treatment groups differ significantly. Interpret results based on p-values or confidence intervals and report these findings clearly, but be mindful of the increased risk of Type I errors and select your method and significance level with care, considering your study's goals and data characteristics.
+
+## Example:
+
+The source of the example is "**Design and Analysis of Experiments** textbook by **D.C. Montgomery** (8th ed.)**"** Problem 3.29 (pg-135).
+
+**Q)** A semiconductor manufacturer has developed three different methods for reducing particle counts on wafers. All three methods are tested on five different wafers and the after treatment particle count obtained. The data are shown below:
+
+![](images/paste-4BF7ACBF.png)
+
+-    Do all methods have the same effect on mean particle count?
+
+-   Plot the residuals versus the predicted response. Construct a normal probability plot of the residuals. Are there potential concerns about the validity of the assumptions?
+
+-   Based on your answer to part (b) conduct another analysis of the particle count data and draw appropriate conclusions.
+
+[**Answer :**]{.underline}
+
+**a)**
+
+[Reading the data:]{.underline}
+
+```{r}
+count <- c(31, 10, 21, 4, 1, 62, 40, 24, 30, 35, 53, 27, 120, 97, 68)
+method <- c(rep(1,5), rep(2,5), rep(3,5))
+method <- as.factor(method)
+dat <- data.frame(count,method)
+str(dat)
+```
+
+[Hypothesis we are testing:]{.underline}
+
+[**Null Hypothesis:**]{.underline}
+
+$$
+H_{0} : \mu_{1} = \mu_{2} = \mu_{3} = \mu
+$$
+
+[**Alternate Hypothesis:**]{.underline}
+
+$$
+H_{a} : \mu{i} \neq \mu , \exists i=1,2,3
+$$
+
+[Performing analysis of Variance:]{.underline}
+
+```{r}
+model1<-aov(count~method,data=dat)
+summary(model1)
+```
+
+As our p-value is 0.00643 \< 0.05($\alpha$), we reject null hypothesis that all the means are equal and conclude that atleast one mean differ and all the methods doesn't have same effect on mean particle count.
+
+**b)**
+
+[Residual Plots:]{.underline}
+
+```{r}
+library(ggfortify)
+autoplot(model1)
+```
+
+From the Normal probability plot(NQQ) we can observe that the data appear to be fairly normal. But, if we observe residuals vs fitted plot, we can see that the variance doesn't appear to be constant. i.e, the spread of the three populations isn't constant.
+
+Now, we need to transform the data to obtain approximate results.
+
+**C)**
+
+```{r}
+library(MASS)
+boxplot(count~method,xlab="Method Type",ylab="Particle Count",main="Boxplot of Observations")
+
+```
+
+This boxplot confirms the unstable variances across the 3 given populations. We will use BoxCox transformation to stabilise the variances.
+
+```{r}
+boxcox(count~method)
+```
+
+Here we can see that $\lambda$ = 1 is outside the confidence interval(span between the left and right lines among the three) and the likelihood function(middle line) is around 0.4(lambda). So, we perform the transformation on count at $\lambda$ = 0.4 and see the changes.
+
+```{r}
+lambda <-  0.4
+trans.count <- count^(lambda)
+boxcox(trans.count~method)
+boxplot(trans.count~method, xlab="Method Type",ylab="Particle Count",main="Boxplot of Observations")
+```
+
+From the boxplot we can see that the variance spread across all the populations is fairly constant than that of before the transfrmation (observe the values in y-axis). From the BoxCox we can see that $\lambda$ = 1 lies within the confidence interval. So, the ANOVA test will now be valid after the transformation.
+
+[**Performing ANOVA on Transformed data:**]{.underline}
+
+```{r}
+trans.dat <- data.frame(trans.count,method)
+trans.dat$method <- as.factor(trans.dat$method)
+str(trans.dat)
+#anova
+model2<-aov(trans.count~method,data=trans.dat)
+summary(model2)
+autoplot(model2)
+```
+
+After the transformation the assumptions of ANOVA (normality and constant variance) are satisfied. From the summary we find that the p-value for the transformed data is 0.00291 \< 0.05($\alpha$). So, we reject null hypothesis ans conclude that all methods doesn't have same effect on mean particle count. Atleast one method has different effect.
+
+## Code:
+
+```{r,eval=FALSE}
+
+#a)
+count <- c(31, 10, 21, 4, 1, 62, 40, 24, 30, 35, 53, 27, 120, 97, 68)
+method <- c(rep(1,5), rep(2,5), rep(3,5))
+method <- as.factor(method)
+dat <- data.frame(count,method)
+str(dat)
+
+model1<-aov(count~method,data=dat)
+summary(model1)
+
+#b)
+library(ggfortify)
+autoplot(model1)
+
+#c)
+library(MASS)
+boxplot(count~method,xlab="Method Type",ylab="Particle Count",main="Boxplot of Observations")
+
+boxcox(count~method)
+
+lambda <-  0.4
+trans.count <- count^(lambda)
+boxcox(trans.count~method)
+boxplot(trans.count~method, xlab="Method Type",ylab="Particle Count",main="Boxplot of Observations")
+
+trans.dat <- data.frame(trans.count,method)
+trans.dat$method <- as.factor(trans.dat$method)
+str(trans.dat)
+#anova
+model2<-aov(trans.count~method,data=trans.dat)
+summary(model2)
+autoplot(model2)
+```
+
+# Randomized Complete Block Design (Armina Mim, Sadman Labib, Abdul Aziz Mohammed)
+
+Randomization is a method employed in the design process to safeguard against the interference of unexpected factors or nuisance factors. In certain scenarios, these interfering factors are identifiable but beyond our control. When the source of interference is both known and controlled, a design technique known as "blocking" can be applied to systematically mitigate its impact on statistical comparisons among various treatments.
+
+The Randomized Complete Block Design (RCBD) stands out as one of the most frequently employed experimental designs. The RCBD is suitable for a wide range of situations. It is often used when test equipment or machinery units have varying operational characteristics, making them a typical candidate for a blocking factor. Additionally, in experiments, batches of raw materials, individuals, and time can also serve as common sources of unwanted variability that can be methodically controlled through the application of blocking techniques.
+
+The traditional statistical model of RCBD is:
+
+$Y_{ij}$ = $\mu$ + $\tau_{i}$ + $\beta_{j}$ + $\epsilon_{ij}$ {*i* = 1,2,3,... ; *j*= 1,2,3,... }
+
+where, $\mu$ = Overall mean
+
+$\tau_{i}$ = Effect of the *i-*th treatment
+
+$\beta_{j}$ = Effect of the *j*-th block
+
+$\epsilon_{ij}$ = Random error term, N(0, $\sigma^2$)
+
+Consequently, the treatment and block effects are considered as deviations from the overall mean which implies that
+
+$\sum_{i=1}^{a}$ $\tau_i$ = 0 and $\sum_{j=1}^{b}$ $\beta_{j}$ = 0
+
+Therefore, we can rewrite the RCBD means model as
+
+$Y_{ij}$ = $\mu_{ij}$ + $\epsilon_{ij}$ {*i* = 1,2,3,... ; *j* = 1,2,3,... }
+
+where, $Y_{ij}$ = $\mu$ + $\tau_{i}$ + $\beta_{j}$.
+
+**Hypothesis**: The hypothesis of interest are,
+
+$H_0$: $\mu_1$ = $\mu_2$ = ... = $\mu_a$
+
+$H_a$: at least one $\mu_i$ $\neq$ $\mu_j$
+
+Because the $i$-th treatment mean $\mu_i$ = $(1/b)$ $\sum_{j=1}^{b}$ ($\mu$ + $\tau_{i}$ + $\beta_{j}$) = $\mu$ + $\tau_{i}$ , an equivalent way to write the above hypothesis is in terms of the treatment effects,
+
+$H_0$: $\tau_1$ = $\tau_2$ = ... = $\tau_a$ = 0
+
+$H_a$: $\tau_i$ $\neq$ 0 at least one $i$
+
+## Assumptions
+
+-   The experimental units can be grouped into homogeneous blocks or groups.
+-   Differences between blocks do not interact with the treatment effects. Each block represents a similar environment or condition.
+-   The observations within each block are independent of each other.
+-   The data collected from one experimental unit does not influence the data collected from another experimental unit within the same block.
+-   The residuals (differences between observed and expected values) are normally distributed within each treatment level.
+-   Normality assumption is crucial, especially for conducting parametric statistical tests like analysis of variance (ANOVA).
+-   The variance of the errors (residuals) is constant across all treatment groups.
+-   This assumption ensures that the spread of the data points around the mean is consistent across all treatment levels.
+-   Randomization helps to eliminate or control the effects of uncontrolled variables or nuisance factors.
+
+Adhering to these assumptions is essential to ensure the validity of the statistical analysis performed on the data collected from a Randomized Complete Block Design experiment. Violations of these assumptions can lead to biased or incorrect conclusions.
+
+## Process
+
+### Sample Size Determination
+
+-   Specify number of treatments (k) you want to compare
+-   Specify number of blocks (b) to use based on blocking factor
+-   Total sample size is k \* b
+
+```{r}
+# Example
+
+# 4 treatments, 6 blocks
+k <- 4 # number of treatments  
+b <- 6 # number of blocks
+n <- k*b 
+```
+
+### Design Generation
+
+```{r}
+# Example
+
+# Specify number of treatments (k) and blocks (b)
+k <- 4
+b <- 4
+
+## Design Generation
+treatments <- rep(1:k, each = b)  # Treatments
+blocks <- rep(1:b, times = k)  # Assign blocks to treatments
+design <- data.frame(Treatment = factor(treatments), Block = factor(blocks))
+
+# Create data frame with block and randomized treatment  
+#design <- data.frame(Block = blocks,Treatment = randomized)
+
+# Randomize treatments within each block
+#set.seed(123)
+#for (i in 1:b) {
+#block_indices <- which(design$Block == i)
+#design$Treatment[block_indices] <- sample(design$Treatment[block_indices])}
+                     
+# Export design
+print("Generated Design:")
+print(design)
+write.csv(design, "design.csv") 
+```
+
+-   The key steps are:
+    1.  Define number of treatments (k) and blocks (b)
+
+    2.  Create block factor with k units per block
+
+    3.  Generate full treatment factor
+
+    4.  Construct data frame with block and randomized treatment
+
+    5.  Export design to CSV
+
+### Data Collection
+
+-   Collect response data for each experimental unit
+-   Import design from CSV file created previously
+-   Construct a data frame with columns for block, treatment, and response
+
+```{r}
+# Example
+
+# Import design
+design <- read.csv("design.csv") 
+
+# Collect response data
+response <- c(143,141,150,146,
+                152,149,137,143,
+                134,136,132,127,
+                129,127,132,129)  # Example response data
+
+# Create data frame
+data = data.frame(block = design$Block,
+                  treatment = design$Treatment,
+                  response = response)
+```
+
+### Exploratory Data Analysis
+
+```{r}
+# Example
+
+# Boxplots
+par(mfrow=c(1,2))
+boxplot(response ~ block, data, xlab = "Block", ylab = "Response", main="Response by Block")
+boxplot(response ~ treatment, data, xlab = "Treatment", ylab = "Response", main="Response by Treatment")
+
+# Check for outliers
+```
+
+-   Generate boxplots to visualize distributions of response by block and treatment
+-   Check for outliers that may need to be addressed
+
+### Statistical Analysis
+
+```{r}
+# Example
+
+# ANOVA model 
+model <- aov(response ~ block + treatment, data)
+
+# Summary
+summary(model) 
+
+# Residual plots
+plot(model)
+
+# Shapiro-Wilk test of normality
+shapiro.test(resid(model))
+```
+
+-   Fit an ANOVA model with block as a fixed factor
+-   Use model summary to view treatment effects
+-   Check residuals for normality and constant variance
+
+### Inference
+
+-   Interpret ANOVA results to draw inferences about treatment effects
+-   Use the F-test and p-values to determine statistical significance
+
+### Multiple Comparisons
+
+```{r}
+# Example 
+# Tukey's HSD
+#TukeyHSD(model)
+#plot(TukeyHSD(model))
+```
+
+-   If there are more than two treatments, use Tukey's HSD to make all pairwise comparisons
+-   Only interpret comparisons if overall F-test is significant
+
+## Example
+
+A medical device manufacturer produces vascular grafts (artificial veins). These grafts are produced by extruding billets of polytetrafluoroethylene (PTFE) resin combined with a lubricant into tubes. Frequently, some of the tubes in a production run contain small, hard protrusions on the external surface. These defects are known as "flicks." The defect is the cause for the rejection of the unit. The product developer responsible for the vascular grafts suspects that the extrusion pressure affects the occurrence of flicks and therefore intends to conduct an experiment to investigate this hypothesis. However, the resin is manufactured by an external supplier and is delivered to the medical device manufacturer in batches. The engineer also suspects that there may be a significant batch-to-batch variation because while the material should be consistent with respect to parameters such as molecular weight, mean particle size, retention, and peak height ratio, it probably isn't due to manufacturing variation at the resin supplier and natural variation in the material. Therefore, the product developer decided to investigate the effect of four different levels of extrusion pressure on flicks using a randomized complete block design considering batches of resin as blocks. The RCBD is shown in Table. Note that there are four levels of extrusion pressure (treatments) and six batches of resin (blocks). Remember that the order in which the extrusion pressures are tested within each block is random. The response variable is yield, or the percentage of tubes in the production run that did not contain any flicks. The GitHub link for the Randomized Complete Block Design of the Vascular Graft Experiment is given below:
+
+GitHub Link: <https://raw.githubusercontent.com/Aziz6094/DOE/f45545a09da54c16d8ccf3331a087f0a0d3122a3/DOE_Mid.csv>
+
+**Reference**: Design and Analysis of Experiments by DOUGLAS C. MONTGOMERY- Eight Edition ,pg 144 -Example 4.1
+
+### Complete R Code of the Exapmle
+
+```{r}
+# Load required libraries
+
+
+## Sample Size Determination
+k <- 4  # Number of treatments
+b <- 6  # Number of blocks
+n <- k * b  # Total sample size
+
+# Design Generation
+blocks <- rep(1:b, times = k)  # Assign blocks to treatments
+treatments <- rep(1:k, each = b)  # Treatments
+design <- data.frame(Block = factor(blocks), Treatment = factor(treatments))
+design
+
+# Randomize treatments within each block
+#set.seed(123)
+#for (i in 1:b) {
+ # block_indices <- which(design$Block == i)
+  #design$Treatment[block_indices] <- sample(design$Treatment[block_indices])
+#}
+
+# Print and export the design
+print("Generated Design:")
+print(design)
+write.csv(design, "design.csv") 
+
+
+# Data Collection (simulated response data)
+#set.seed(123456)  # for reproducibility
+response <-read.csv("https://raw.githubusercontent.com/Aziz6094/DOE/f45545a09da54c16d8ccf3331a087f0a0d3122a3/DOE_Mid.csv") #Example response data
+response
+dat<-data.frame(response)
+response<-c(dat[1,2],dat[1,3],dat[1,4],dat[1,5],dat[1,6],dat[1,7],dat[2,2],dat[2,3],dat[2,4],dat[2,5],dat[2,6],dat[2,7],dat[3,2],dat[3,3],dat[3,4],dat[3,5],dat[3,6],dat[3,7],dat[4,2],dat[4,3],dat[4,4],dat[4,5],dat[4,6],dat[4,7])
+# Create data frame
+data <- data.frame(block = design$Block,treatment = design$Treatment,response = response)
+data
+# Exploratory Data Analysis
+# Boxplots
+par(mfrow=c(1,2))
+boxplot(response ~ block, data, main="Response by Block", xlab = "Block", ylab = "Response")
+boxplot(response ~ treatment, data, main="Response by Treatment", xlab = "Treatment", ylab = "Response")
+
+# Check for outliers
+outliers <- boxplot.stats(data$response)$out
+print("Outliers:")
+print(outliers)
+
+# Statistical Analysis
+# ANOVA model 
+?aov
+model <- aov(response ~block+treatment, data)
+
+# Summary
+print("ANOVA Summary:")
+print(summary(model)) 
+
+# Since the significance level alpha=0.05, and the P-value is 0.00192 for the treatment. Therefore, we can reject the null hypothesis. 
+
+# Residual plots
+par(mfrow=c(2,2))
+plot(model)
+
+# Shapiro-Wilk test of normality
+print("Shapiro-Wilk Test:")
+print(shapiro.test(resid(model)))
+
+# Inference
+# Interpret ANOVA results
+# Use the F-test and p-values to determine statistical significance
+
+# Multiple Comparisons
+if (anova(model)$`Pr(>F)`[2] < 0.05) {
+  tukey_results <- TukeyHSD(model)
+  print("Tukey's HSD for Multiple Comparisons:")
+  print(tukey_results)
+} else {
+  print("No significant differences found.")
+}
+plot(TukeyHSD(model))
+
+```
+
+# Latin-Square (Long Vu Tran,A K M Sarower Kabir,Manoj Giri)
+
+The Latin square design is used to eliminate **two known and controllable nuisance** sources of variability; that is, it systematically allows **blocking in two directions**.
+
+The number of levels of both blocking variables needs to be the same and must equal the number of treatment levels.
+
+Linear effect equation:
+
+$$ Y_{ijk}=\mu+\tau_{i}+\beta_{j}+\alpha_{k}+\epsilon_{ijk} $$
+
+Where,
+
+$\mu$ = Grand Mean
+
+$\tau_{i}$ = Treatment effect
+
+$\beta_{j}$ = Block-1 effect
+
+$\alpha_{k}$ = Block-2 effect
+
+$\epsilon_{ijk}$ = Random error
+
+i = number of treatments
+
+j = number of block-1
+
+k = number of block-2
+
+## Assumptions
+
+-   The **errors** $\epsilon_{ijk}$ are **normally** and **independently** **distributed** with mean zero and **constant** **variance** $\sigma^{2}$.
+
+-   There is **no interaction** between the two blocks and treatment.
+
+## Process
+
+### Sample Size Determination
+
+For a p x p Latin square, the number of observations for each replication is $p^{2}$.
+
+When small Latin squares are used, it is frequently desirable to replicate them to increase the error degrees of freedom. To determine the number of replications, estimate the power of the test for each number of replications then compare it with the expected power. There are two cases to estimate the power of the test:
+
+-   Pre-sample available with known variation
+
+```{r eval=FALSE}
+#power.anova.test(groups= 'number of group',n= 'sample size',between.var= 'variation between group',within.var= 'variation within group',sig.level= alpha)
+```
+
+-   Without pre-samples
+
+```{r eval=FALSE}
+#d is the range of means divided by sigma, k is the number of populations
+#without pre-samples, d is specified as the difference in means as a proportion of sigma to which the power correspondes
+#The effect is given by d*sqrt(1/(2*k)) 
+library(pwr)
+#pwr.anova.test(k='number of group',n='sample size',f=d*sqrt(1/(2*k)),sig.level=alpha)
+#plot(pwr.anova.test(k='number of group',n=sample size',d*sqrt(1/(2*k)),sig.level=alpha)
+
+```
+
+### Design Layout
+
+Use the function OutDesign below to export the "Latin square layout.csv" file in the working directory folder.
+
+```{r}
+library(agricolae)
+OutDesign<-function(treatment,block1,block2){
+  outdesign<-design.lsd(treatment, )$book
+  row <- seq(1,length(treatment))
+  outdesign <- merge(outdesign, data.frame(block1,row), by = "row")
+  col <- seq(1,length(treatment))
+  outdesign <- merge(outdesign,data.frame(block2, col), by = 'col')
+  outdesign <- outdesign[,3:6]
+  write.csv(outdesign,"Latin square layout.csv")}
+```
+
+### Collect Data
+
+Adding the response column then conduct the experiment to full fill that column.
+
+Use the InDesign function below to input back the file into R.
+
+```{r}
+InDesign<-function(path){
+  indesign<-read.csv(path)
+  indesign<-indesign[,3:6]
+  indesign$Response <- as.numeric(indesign$Response)
+  indesign
+  }
+```
+
+### Preliminary Plots
+
+A histogram of response data can be used to have an initial look on the distribution.
+
+```{r}
+#hist("Response, main="Title of the Histogram", Xlab="X label", ylab="Y label")
+```
+
+A Box-plot also can be used to review if there are outliers in response.
+
+```{r}
+#boxplot('Response')
+```
+
+### Statistical Test
+
+Null hypotheses: $H_{o}:\mu_{ 1}=\mu_{ 2}= ... =\mu_{ i}$
+
+Alternative Hypotheses: $H_{a}:$ At least one $\mu$ is different
+
+Create the ANOVA table:
+
+```{r eval=FALSE}
+#model <- aov(Response~treatment+Block1+Block2)
+#summary(model)
+```
+
+### Residuals
+
+Create plots of residuals to check the assumption:
+
+```{r}
+#plot(model)
+```
+
+-   Normal probability plot: If the underlying error distribution is normal, this plot will resemble a straight line.
+
+-   Plot of Residuals Versus Fitted Values: the residuals should be structureless and unrelated to the predicted response.
+
+-   Plots of Residuals Versus treatment levels: Variation of residuals should be equal for all levels of treatment.
+
+When the assumptions are violated, Variance Stabilizing Transformation (VST) using Box-Cox or Non-Parametric analysis should be used.
+
+### Inference
+
+If the assumptions are met, then compare the P-value of treatment in the ANOVA table with $\alpha$ to have the conclusion on the effect of treatment.
+
+### Multiple Comparisons
+
+After rejecting the $H_{o}$ hypothesis, the two most commonly used techniques for making multiple comparisons between group means are LSD (Least Significant Difference) and HSD (Honestly Significant Difference) or also called Tukey's HSD Test.
+
+LSD test (Least Significant Difference test):\
+1)Performs all possible pairwise comparisons between group means.\
+2)Uses the pooled standard error from the ANOVA to calculate a t-statistic and p-value for each pair of means.
+
+```{r}
+library(agricolae)
+##LSD.test(y, trt, Dferror, MSerror, alpha)     
+#y= model(aov or lm) or answer of the experimental unit     
+#trt= Constant( only y=model) or vector treatment applied to each experimental unit.    
+#DFerror= Degrees of freedom of the experimental error.    
+#MSerror= Means square error of the experimental.    
+#alpha= Level of risk for the test
+```
+
+If we select $\alpha$ = 0.05, the probability of reaching the correct decision on any single comparison is 0.95. However, the probability of reaching the correct conclusion on all comparisons is considerably less than 0.95, so the type I error is inflated in LSD test. Whereas TukeyHSD will control the type 1 error rate by adjusting the p-value.
+
+Tukey's HSD Test:\
+1)Uses the Studentized range statistic to make all pairwise comparisons.\
+2)Controls family-wise error rate for multiple testing.
+
+```{r}
+library(car)
+##TukeyHSD(x)    
+#x=A fitted model object, usually an aov fit.     
+##plot(TukeyHSD())
+```
+
+## Example
+
+Automobile Emission Experiment.
+
+Four cars and four drivers are employed in a study for possible differences in effect between four gasoline additives(A, B, C, D) on the emission of the car. Even though cars can be identical models, slight systematic differences are likely to occur in their performance, and even though each driver may do his best to drive the car in the manner required by the test, slight systematic differences can occur from driver to driver. It would be desirable to eliminate both the car-to-car and driver-to-driver differences. With the $\alpha$ = 0.05, conduct the experiment and then analyze the effect of gasoline additives on emission.
+
+### Sample size determination:
+
+Since the gasoline additives have 4 levels (A, B, C, D), the sample size of Latin square design is 4 x 4 = 16 for one replication.
+
+### Create the design layout:
+
+```{r}
+GasAdditives <- c('A','B','C','D')
+Car <- c('Car1', 'Car2', 'Car3', 'Car4')
+Driver <- c('Driver1', 'Driver2', 'Driver3', 'Driver4')
+OutDesign(GasAdditives, Car, Driver)
+```
+
+After collecting data, use the InDesign function to import into R
+
+```{r}
+indesign <- InDesign('https://raw.githubusercontent.com/tlvu-mecha-data/DOEcookbookLatinsquare/main/dataLatinsquarelayout.txt')
+```
+
+### Preliminary plots of the response:
+
+Histogram:
+
+```{r}
+hist(indesign$Response, main="Histogram of Emission", xlab="Emission", col ='blue')
+```
+
+Box-plot:
+
+```{r}
+boxplot(Response~treatment, data = indesign, main = 'Box-plot of Emission', ylab = 'Emission', xlab = 'Treatment', col = 'green')
+```
+
+-   The variance on treatment A are higher than B, C and D.
+
+-   Treatment D has the lowest median of emission.
+
+### Statistical test:
+
+Hypothesis:
+
+Null hypotheses: $H_{o}:\mu_{ 1}=\mu_{ 2}= \mu_{3} =\mu_{ 4}$
+
+Alternative Hypotheses: $H_{a}:$ At least one $\mu$ is different
+
+Create the ANOVA table:
+
+```{r}
+model <- aov(indesign$Response~indesign$treatment+indesign$block1+indesign$block2)
+summary(model)
+```
+
+### Residuals
+
+```{r}
+plot(model)
+```
+
+-   Normal probability plot: This plot resemble a straight line indicate the residuals follow normal distribution.
+
+-   Plot of Residuals Versus Fitted Values: the residuals are structureless and unrelated to the predicted response.
+
+-   Plots of Residuals Versus treatment levels: Variation of residuals are equal for all levels of treatment.
+
+### Inference:
+
+The assumptions are met, P-value = 0.000693 which is smaller than $\alpha$ = 0.05.
+
+=\> Reject the Null hypothesis
+
+### Multiple Comparisons
+
+LSD test (Least Significant Difference test):
+
+```{r}
+library(agricolae)
+indesign$treatment <- as.factor(indesign$treatment)
+lsd <- LSD.test(y = indesign$Response, trt = indesign$treatment, DFerror = 6, MSerror = 2.25, alpha = 0.05)
+lsd
+plot(lsd, main = 'LSD chart for treatment', xlab = 'Gasoline additive', ylab = 'Emission')
+```
+
+Comments:
+
+From the LSD test mean of treatment B and C are equal. Mean of treatment A is different from B, C and D. Mean of treatment D is different from B, C and A.
+
+Tukey's HSD Test:
+
+```{r}
+Tukey <- TukeyHSD(model, conf.level = 0.95)
+Tukey
+plot(Tukey, col = 'blue')
+```
+
+Comments:
+
+As shown in the chart, only D-A and C-B are not significantly different. The other pair are significantly different. Differences in mean levels of **blocks 1 and 2 are not interested** in this analysis.
+
+### Complete Code
+
+```{r eval=FALSE}
+library(agricolae)
+OutDesign<-function(treatment,block1,block2){
+  outdesign<-design.lsd(treatment, )$book
+  row <- seq(1,length(treatment))
+  outdesign <- merge(outdesign, data.frame(block1,row), by = "row")
+  col <- seq(1,length(treatment))
+  outdesign <- merge(outdesign,data.frame(block2, col), by = 'col')
+  outdesign <- outdesign[,3:6]
+  write.csv(outdesign,"Latin square layout.csv")}
+InDesign<-function(path){
+  indesign<-read.csv(path)
+  indesign<-indesign[,3:6]
+  indesign$Response <- as.numeric(indesign$Response)
+  indesign
+}
+GasAdditives <- c('A','B','C','D')
+Car <- c('Car1', 'Car2', 'Car3', 'Car4')
+Driver <- c('Driver1', 'Driver2', 'Driver3', 'Driver4')
+OutDesign(GasAdditives, Car, Driver)
+indesign <- InDesign('https://raw.githubusercontent.com/tlvu-mecha-data/DOEcookbookLatinsquare/main/dataLatinsquarelayout.txt')
+hist(indesign$Response, main="Histogram of Emission", xlab="Emission", col ='blue')
+boxplot(Response~treatment, data = indesign, main = 'Box-plot of Emission', ylab = 'Emission', xlab = 'Treatment', col = 'green')
+model <- aov(indesign$Response~indesign$treatment+indesign$block1+indesign$block2)
+summary(model)
+plot(model)
+indesign$treatment <- as.factor(indesign$treatment)
+lsd <- LSD.test(y = indesign$Response, trt = indesign$treatment, DFerror = 6, MSerror = 2.25, alpha = 0.05)
+lsd
+plot(lsd, main = 'LSD chart for treatment', xlab = 'Gasoline additive', ylab = 'Emission')
+Tukey <- TukeyHSD(model, conf.level = 0.95)
+Tukey
+plot(Tukey, col = 'blue')
+```
